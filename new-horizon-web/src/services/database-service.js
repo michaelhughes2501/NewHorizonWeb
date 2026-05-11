@@ -304,8 +304,10 @@ export const JobService = {
       .select()
       .single();
     if (error) throw error;
-    // Increment views
-    await supabase.rpc('increment', { table: 'jobs', id: jobId, column: 'applications' });
+    // The `increment_job_apps` AFTER INSERT trigger on job_applications
+    // updates jobs.applications. Do not call a separate RPC here or the
+    // counter would double-increment (and the previously referenced
+    // `increment` RPC does not exist in the schema).
     return data;
   },
 
@@ -431,7 +433,12 @@ export const BlogService = {
   },
 
   async likePost(postId, userId) {
-    await supabase.from('blog_likes').upsert({ post_id: postId, user_id: userId });
+    // Idempotent like via UNIQUE(post_id, user_id) on blog_likes.
+    const { error: likeError } = await supabase
+      .from('blog_likes')
+      .upsert({ post_id: postId, user_id: userId });
+    if (likeError) throw likeError;
+    // Increment the cached counter via RPC (defined in database-schema.sql).
     await supabase.rpc('increment_post_likes', { post_id: postId });
   },
 
