@@ -219,8 +219,10 @@ ALTER TABLE jobs                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_applications   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE blog_posts         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE blog_likes         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saved_jobs         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log          ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: users can read public profiles, edit only their own
 CREATE POLICY "public profiles viewable" ON profiles FOR SELECT USING (public_profile = TRUE AND is_banned = FALSE);
@@ -246,6 +248,17 @@ CREATE POLICY "read approved jobs" ON jobs FOR SELECT USING (is_active = TRUE AN
 
 -- Blog: anyone can read published approved posts
 CREATE POLICY "read published posts" ON blog_posts FOR SELECT USING (is_published = TRUE AND is_approved = TRUE);
+
+-- Blog likes: anyone authenticated can read; users manage their own
+CREATE POLICY "read blog likes" ON blog_likes FOR SELECT USING (TRUE);
+CREATE POLICY "own blog likes" ON blog_likes FOR ALL USING (
+  user_id = (SELECT id FROM profiles WHERE auth_id = auth.uid())
+);
+
+-- Saved jobs: own only
+CREATE POLICY "own saved jobs" ON saved_jobs FOR ALL USING (
+  user_id = (SELECT id FROM profiles WHERE auth_id = auth.uid())
+);
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- FUNCTIONS & TRIGGERS
@@ -303,6 +316,14 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER job_app_count AFTER INSERT ON job_applications FOR EACH ROW EXECUTE FUNCTION increment_job_apps();
 
+-- Increment blog post likes counter. Called from BlogService.likePost via RPC.
+CREATE OR REPLACE FUNCTION increment_post_likes(post_id UUID)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE blog_posts SET likes = likes + 1 WHERE id = post_id;
+END;
+$$ LANGUAGE plpgsql;
+
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- SEED DATA
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -321,4 +342,4 @@ INSERT INTO jobs (title, company, location, state, job_type, wage_display, descr
   ('Warehouse Associate', 'Amazon Logistics', 'Dallas, TX', 'TX', 'Full-time', '$18–$21/hr', 'No background disqualification for non-violent offenses. Benefits from day 1.', '📦', TRUE, TRUE, TRUE, TRUE, ARRAY['Physical','Benefits','Team']),
   ('Electrician Apprentice', 'City Electric Co.', 'Orlando, FL', 'FL', 'Full-time', '$22–$26/hr', 'Union job. Learn the trade under licensed electricians.', '⚡', TRUE, FALSE, TRUE, TRUE, ARRAY['Trade','Union','Growth']),
   ('Culinary Assistant', 'Fresh Start Kitchens', 'Atlanta, GA', 'GA', 'Part-time', '$15–$17/hr', 'Founded by formerly incarcerated chefs. All backgrounds welcome.', '🍳', TRUE, TRUE, TRUE, TRUE, ARRAY['Nonprofit','Flexible','Community']),
-  ('Remote Data Entry Clerk', 'RemoteWork Inc.', 'Remote', 'Remote', 'Part-time', '$14–$16/hr', 'Fully remote. Laptop provided. Ideal for parole restrictions.', '💻', TRUE, TRUE, TRUE, TRUE, ARRAY['Remote','Flexible','WFH']);
+  ('Remote Data Entry Clerk', 'RemoteWork Inc.', 'Remote', 'Remote', 'Part-time', '$14–$16/hr', 'Fully remote. Laptop provided. Ideal for parole restrictions.', '📚', TRUE, TRUE, TRUE, TRUE, ARRAY['Remote','Flexible','WFH']);
