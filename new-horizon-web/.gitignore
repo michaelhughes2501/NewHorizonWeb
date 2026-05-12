@@ -1,6 +1,14 @@
-node_modules
-dist
-.DS_Store
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local environment
 .env.local
 .env.server
 .env.server.local
+
+# Logs and Temp
+*.log
+.DS_Store
