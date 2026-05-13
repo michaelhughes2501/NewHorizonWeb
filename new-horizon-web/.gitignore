@@ -4,7 +4,8 @@ node_modules/
 # Build output
 dist/
 
-# Local environment
+# Local environment files (never commit real credentials)
+.env
 .env.local
 .env.server
 .env.server.local
