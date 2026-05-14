@@ -114,7 +114,7 @@ export const ProfileService = {
   async getCommunity({ state, limit = 20, offset = 0 }) {
     let query = supabase
       .from('profiles')
-      .select('id,name,avatar,avatar_url,age,state,bio,offense_type,release_year,interests,last_seen')
+      .select('id,name,avatar,avatar_url,age,state,bio,offense_type,release_year,interests,last_seen,online')
       .eq('public_profile', true)
       .eq('is_banned', false)
       .eq('is_active', true)
@@ -376,6 +376,10 @@ export const NotificationService = {
         filter: `user_id=eq.${userId}`,
       }, payload => onNotification(payload.new))
       .subscribe();
+  },
+
+  unsubscribe(channel) {
+    if (channel) supabase.removeChannel(channel);
   },
 
   // Send Expo push notification
