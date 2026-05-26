@@ -9,8 +9,9 @@
 import { createClient } from '@supabase/supabase-js';
 
 // ─── SUPABASE CLIENT ──────────────────────────────────────────────────────────
-const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://YOUR_PROJECT.supabase.co';
-const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || 'YOUR_ANON_KEY';
+// Expo SDK 49+ exposes env vars prefixed with EXPO_PUBLIC_ at runtime.
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'YOUR_ANON_KEY';
 const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 
 // Accept either the auth user id or the profile row id while the app is still
@@ -112,7 +113,7 @@ export const ProfileService = {
   async getCommunity({ state, limit = 20, offset = 0 }) {
     let query = supabase
       .from('profiles')
-      .select('id,name,avatar,avatar_url,age,state,bio,offense_type,release_year,interests,last_seen')
+      .select('id,name,avatar,avatar_url,age,state,bio,offense_type,release_year,interests,last_seen,online')
       .eq('public_profile', true)
       .eq('is_banned', false)
       .eq('is_active', true)
@@ -239,7 +240,6 @@ export const MessageService = {
     return count || 0;
   },
 
-  // Real-time subscription for a conversation
   subscribeToConversation(conversationId, onMessage) {
     return supabase
       .channel(`convo:${conversationId}`)
@@ -302,8 +302,8 @@ export const JobService = {
       .select()
       .single();
     if (error) throw error;
-    // Increment views
-    await supabase.rpc('increment', { table: 'jobs', id: jobId, column: 'applications' });
+    // The increment_job_apps AFTER INSERT trigger on job_applications
+    // updates jobs.applications automatically; no separate RPC needed.
     return data;
   },
 
@@ -354,7 +354,6 @@ export const NotificationService = {
     return count || 0;
   },
 
-  // Real-time notification subscription
   subscribeToNotifications(userId, onNotification) {
     return supabase
       .channel(`notifs:${userId}`)
@@ -367,7 +366,10 @@ export const NotificationService = {
       .subscribe();
   },
 
-  // Send Expo push notification
+  unsubscribe(channel) {
+    if (channel) supabase.removeChannel(channel);
+  },
+
   async sendPushNotification(expoPushToken, { title, body, data = {} }) {
     if (!expoPushToken) return;
     try {
@@ -381,24 +383,19 @@ export const NotificationService = {
     }
   },
 
-  // Send push via Edge Function (server-side, recommended)
   async sendServerPush(userId, notification) {
     return supabase.functions.invoke('send-push', {
       body: { user_id: userId, ...notification },
     });
   },
 
-  // Create a notification record + send push
   async createAndSend(userId, { type, title, body, icon = '🔔', data = {}, actionUrl }) {
-    // 1. Insert into DB
     await supabase.from('notifications').insert({ user_id: userId, type, title, body, icon, data, action_url: actionUrl });
-    // 2. Get user's push token
     const { data: profile, error } = await filterProfileByUser(
       supabase.from('profiles').select('push_token, push_notifs'),
       userId,
     ).single();
     if (error && error.code !== 'PGRST116') throw error;
-    // 3. Send push if enabled
     if (profile?.push_notifs && profile?.push_token) {
       await this.sendPushNotification(profile.push_token, { title, body, data });
     }
