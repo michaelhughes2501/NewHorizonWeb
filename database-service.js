@@ -113,7 +113,7 @@ export const ProfileService = {
   async getCommunity({ state, limit = 20, offset = 0 }) {
     let query = supabase
       .from('profiles')
-      .select('id,name,avatar,avatar_url,age,state,bio,offense_type,release_year,interests,last_seen,online')
+      .select('id,name,avatar,avatar_url,age,state,bio,offense_type,release_year,interests,last_seen')
       .eq('public_profile', true)
       .eq('is_banned', false)
       .eq('is_active', true)
@@ -161,8 +161,8 @@ export const ConnectionService = {
       .from('connections')
       .select(`
         *,
-        user_a_profile:profiles!connections_user_a_fkey(id,name,avatar,state,online),
-        user_b_profile:profiles!connections_user_b_fkey(id,name,avatar,state,online)
+        user_a_profile:profiles!connections_user_a_fkey(id,name,avatar,state),
+        user_b_profile:profiles!connections_user_b_fkey(id,name,avatar,state)
       `)
       .or(`user_a.eq.${userId},user_b.eq.${userId}`)
       .eq('status', 'matched');
