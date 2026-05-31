@@ -10,11 +10,11 @@ Top-level `.jsx` files (`admin-dashboard.jsx`, `mobile-app.jsx`, `notification-s
 
 ## Tech stack
 
-- Vite 6 + React 19 (React DOM 19) — `new-horizon-web/`
-- React Router 6.30 (declarative routes with lazy-loaded pages)
-- Supabase JS (`@supabase/supabase-js` 2.x)
+- Vite + React (single-page app under `new-horizon-web/`)
+- React Router v6 (declarative routes, lazy-loaded pages)
+- Supabase JS (`@supabase/supabase-js`)
 - PostgreSQL schema in `database-schema.sql` / `new-horizon-web/supabase/database-schema.sql` — intended for Supabase
-- Requires Node 18.17.0+, ES modules
+- ES modules; Node version requirement and exact package versions are pinned in `new-horizon-web/package.json` — check there if anything below drifts.
 
 ## Commands (run inside `new-horizon-web/`)
 
@@ -28,13 +28,13 @@ npm run preview    # serve the production build
 
 ## Environment
 
-Copy `new-horizon-web/.env.example` to `new-horizon-web/.env` and set:
+Copy `new-horizon-web/.env.example` to `new-horizon-web/.env` and fill in your Supabase URL + anon key. The canonical lists live in:
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- (Optional) `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `new-horizon-web/.env.example` — client-safe `VITE_*` vars (Supabase URL, anon key, optional publishable key).
+- `new-horizon-web/.env.server.example` — server-only secrets (Supabase service-role/access tokens, DB password, mail API keys, deployment URLs).
+- `new-horizon-web/ENVIRONMENT.md` — long-form documentation for every variable.
 
-Server-only secrets live in `new-horizon-web/.env.server.example` (`SUPABASE_ACCESS_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_PASSWORD`, `RESEND_API_KEY`, deployment URLs) and must **never** be re-prefixed with `VITE_` (that would inline them into the client bundle). See `new-horizon-web/ENVIRONMENT.md` for the full list.
+Server-only secrets must **never** be re-prefixed with `VITE_` — that would inline them into the client bundle and bypass RLS.
 
 ## Repo layout
 
@@ -45,11 +45,11 @@ NewHorizonWeb/
 ├── SECURITY.md
 ├── .github/dependabot.yml                 ← weekly npm + Actions updates (groups: react, vite)
 │
-├── admin-dashboard.jsx     (43 KB)        ← reference prototype only
-├── mobile-app.jsx          (48 KB)        ← reference prototype only (React Native)
-├── notification-system.jsx (24 KB)        ← reference prototype only
-├── database-service.js     (17 KB)        ← top-level reference copy
-├── database-schema.sql     (19 KB)        ← top-level reference copy
+├── admin-dashboard.jsx                    ← reference prototype only
+├── mobile-app.jsx                         ← reference prototype only (React Native sketch)
+├── notification-system.jsx                ← reference prototype only
+├── database-service.js                    ← top-level reference copy of the service layer
+├── database-schema.sql                    ← top-level reference copy of the schema
 ├── scripts.js  style.css                  ← doc/landing helpers (not used by Vite app)
 │
 └── new-horizon-web/                       ← THE ACTUAL VITE SPA — open this in VS Code
