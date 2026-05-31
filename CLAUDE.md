@@ -71,10 +71,10 @@ NewHorizonWeb/
 
 - **All DB access** goes through Supabase + RLS. Never embed a service-role key on the client.
 - Only `VITE_*` env vars are exposed to the browser bundle.
-- Use `react-router-dom` v6 patterns (`createBrowserRouter` preferred). Pages are lazy-loaded in `src/main.jsx` — register new routes there.
+- Use `react-router-dom` v6 patterns. The current implementation in `src/main.jsx` uses `<BrowserRouter>` with declarative `<Routes>` / `<Route>` and lazy-loaded pages — keep that style consistent (don't mix in `createBrowserRouter` ad-hoc).
 - Use `<img loading="lazy">` and `srcset` for images so pages stay fast.
 - Use the wrappers in `src/services/database-service.js` (Auth/Profile/Job/Message services) rather than calling `supabase` directly from components.
-- Mirror schema changes in **both** `database-schema.sql` (top-level reference) **and** `new-horizon-web/supabase/database-schema.sql` (active migration source). Treat the `supabase/` copy as authoritative for the running app.
+- Mirror schema changes in **both** `database-schema.sql` (top-level reference) **and** `new-horizon-web/supabase/database-schema.sql` (active migration source). Treat the `supabase/` copy as authoritative for the running app. **Note**: as of this writing the two copies are out of sync — the Supabase copy has extra RLS for `blog_likes`/`audit_log`, policies for `blog_likes`/`saved_jobs`, and an `increment_post_likes` function. Reconcile them when you touch the schema.
 - The brand uses a gold/cream/charcoal palette with Cormorant Garamond + DM Sans typography (defined inside `App.jsx`); don't introduce a CSS framework on top.
 - Treat criminal-history fields as private — store them but never surface them in public API responses.
 - The top-level `*.jsx` and `database-service.js` files at the repo root are documentation/prototype only — **don't import them from the Vite app** and don't bring them into bundles.
