@@ -56,9 +56,10 @@ document.head.appendChild(s);
 
 const hasConfiguredValue = (value, placeholder) => Boolean(value && value !== placeholder);
 const BACKEND_READY = hasConfiguredValue(import.meta.env.VITE_SUPABASE_URL, "https://YOUR_PROJECT.supabase.co")
+  && hasConfiguredValue(import.meta.env.VITE_SUPABASE_URL, "placeholder")
   && (
     hasConfiguredValue(import.meta.env.VITE_SUPABASE_ANON_KEY, "YOUR_ANON_KEY")
-    || hasConfiguredValue(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "sb_publishable_xxxxxxxxxxxxxxxxxxxx")
+    || hasConfiguredValue(import.meta.env.VITE_SUPABASE_ANON_KEY, "placeholder")
   );
 
 function fmtRelative(value) {
@@ -164,12 +165,12 @@ export default function NotificationCenter() {
         return;
       }
       try {
-        const session = await AuthService.getSession();
-        if (!session) {
+        const user = await AuthService.getUser();
+        if (!user) {
           if (active) setStatus("Sign in to load live notifications");
           return;
         }
-        const myProfile = await ProfileService.getMyProfile();
+        const myProfile = await ProfileService.getProfile(user.id);
         if (!active) return;
         setProfile(myProfile);
         setPrefs(p => ({
@@ -177,11 +178,12 @@ export default function NotificationCenter() {
           push: myProfile?.push_notifs ?? p.push,
           email: myProfile?.email_notifs ?? p.email,
         }));
-        const liveNotifs = await NotificationService.getNotifications(myProfile.id);
+        const liveNotifs = await NotificationService.listNotifications(user.id);
         if (!active) return;
-        setNotifs((liveNotifs || []).map(normalizeNotif).length ? (liveNotifs || []).map(normalizeNotif) : []);
+        const mapped = (liveNotifs || []).map(normalizeNotif);
+        setNotifs(mapped.length ? mapped : []);
         setStatus("WebSocket Connected");
-        channel = NotificationService.subscribeToNotifications(myProfile.id, payload => {
+        channel = NotificationService.subscribeToNotifications(user.id, payload => {
           const next = normalizeNotif(payload);
           setIncoming(next);
           setNotifs(prev => [next, ...prev]);
@@ -195,8 +197,8 @@ export default function NotificationCenter() {
     load();
     return () => {
       active = false;
-      if (channel) {
-        NotificationService.unsubscribe(channel);
+      if (channel && typeof channel.unsubscribe === "function") {
+        channel.unsubscribe();
       }
     };
   }, []);
@@ -228,21 +230,13 @@ export default function NotificationCenter() {
       try {
         await NotificationService.markAllRead(profile.id);
       } catch {
-        // Ignore persistence errors in the demo-friendly UI.
+        // Ignore persistence errors in demo-friendly UI.
       }
     }
   };
 
-  const deleteN = async (id) => {
-    const previous = notifs;
+  const deleteN = (id) => {
     setNotifs(p => p.filter(n => n.id !== id));
-    if (BACKEND_READY) {
-      try {
-        await NotificationService.deleteNotification(id);
-      } catch {
-        setNotifs(previous);
-      }
-    }
   };
 
   const savePrefs = async () => {

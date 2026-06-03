@@ -158,6 +158,15 @@ function Sidebar({ page, setPage }) {
 }
 
 // ─── OVERVIEW ─────────────────────────────────────────────────────────────────
+const BACKEND_READY = Boolean(
+  import.meta.env.VITE_SUPABASE_URL &&
+  import.meta.env.VITE_SUPABASE_URL !== "https://YOUR_PROJECT.supabase.co" &&
+  import.meta.env.VITE_SUPABASE_URL !== "placeholder" &&
+  import.meta.env.VITE_SUPABASE_ANON_KEY &&
+  import.meta.env.VITE_SUPABASE_ANON_KEY !== "YOUR_ANON_KEY" &&
+  import.meta.env.VITE_SUPABASE_ANON_KEY !== "placeholder"
+);
+
 function Overview() {
   const cards = [
     { icon:"👥", label:"Total Members",     value:STATS.totalUsers,     sub:`+${STATS.newUsersToday} today`, color:T.info,    trend:`${STATS.newUsersToday} today` },
@@ -175,6 +184,50 @@ function Overview() {
       <div style={{ marginBottom:28 }}>
         <h1 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:34, fontWeight:300, marginBottom:4 }}>Admin <em style={{ color:T.gold }}>Overview</em></h1>
         <p style={{ color:T.slate, fontSize:14 }}>Platform health at a glance — {new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"})}</p>
+      </div>
+
+      {/* Live Supabase stat cards */}
+      <div style={{ marginBottom:24 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+          <span style={{ fontSize:13, fontWeight:600, color:T.slate, textTransform:"uppercase", letterSpacing:"1px" }}>Live Database Stats</span>
+          <div style={{ height:1, flex:1, background:T.mist }} />
+          <div style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 10px", borderRadius:20, background:BACKEND_READY?T.successL:T.warnL, border:`1px solid ${BACKEND_READY?T.success:T.warn}30` }}>
+            <div style={{ width:6, height:6, borderRadius:"50%", background:BACKEND_READY?T.success:T.warn, animation:"pulse 2s infinite" }} />
+            <span style={{ fontSize:11, fontWeight:600, color:BACKEND_READY?T.success:T.warn }}>{BACKEND_READY?"Connected":"Not Connected"}</span>
+          </div>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14 }}>
+          <div className="stat-card" style={{ background:"white", borderRadius:14, border:`1px solid ${T.mist}`, padding:"20px 22px", display:"flex", gap:16, alignItems:"center" }}>
+            <div style={{ width:44, height:44, borderRadius:12, background:T.infoL, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>👥</div>
+            <div>
+              <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:600, color:T.charcoal }}>{BACKEND_READY ? "—" : STATS.totalUsers.toLocaleString()}</div>
+              <div style={{ fontSize:13, fontWeight:500, color:T.charcoal }}>Total Users</div>
+              <div style={{ fontSize:11, color:T.slate, marginTop:1 }}>{BACKEND_READY ? "Live from profiles table" : "Mock data"}</div>
+            </div>
+          </div>
+          <div className="stat-card" style={{ background:"white", borderRadius:14, border:`1px solid ${T.mist}`, padding:"20px 22px", display:"flex", gap:16, alignItems:"center" }}>
+            <div style={{ width:44, height:44, borderRadius:12, background:T.successL, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>📝</div>
+            <div>
+              <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:600, color:T.charcoal }}>{BACKEND_READY ? "—" : STATS.totalPosts.toLocaleString()}</div>
+              <div style={{ fontSize:13, fontWeight:500, color:T.charcoal }}>Total Posts</div>
+              <div style={{ fontSize:11, color:T.slate, marginTop:1 }}>{BACKEND_READY ? "Live from blog_posts table" : "Mock data"}</div>
+            </div>
+          </div>
+          <div className="stat-card" style={{ background:"white", borderRadius:14, border:`1px solid ${T.mist}`, padding:"20px 22px", display:"flex", gap:16, alignItems:"center" }}>
+            <div style={{ width:44, height:44, borderRadius:12, background:T.cream, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>💼</div>
+            <div>
+              <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:30, fontWeight:600, color:T.charcoal }}>{BACKEND_READY ? "—" : STATS.totalJobs.toLocaleString()}</div>
+              <div style={{ fontSize:13, fontWeight:500, color:T.charcoal }}>Total Jobs</div>
+              <div style={{ fontSize:11, color:T.slate, marginTop:1 }}>{BACKEND_READY ? "Live from jobs table" : "Mock data"}</div>
+            </div>
+          </div>
+        </div>
+        {!BACKEND_READY && (
+          <div style={{ marginTop:12, padding:"12px 16px", borderRadius:10, background:T.warnL, border:`1px solid ${T.warn}30`, display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:16 }}>🔗</span>
+            <span style={{ fontSize:13, color:T.warn, fontWeight:500 }}>Connect your Supabase project to see live data — add your credentials to <code style={{ fontFamily:"monospace", background:T.warn+"15", padding:"1px 5px", borderRadius:4 }}>.env</code> to activate real-time stats.</span>
+          </div>
+        )}
       </div>
 
       {/* Metric grid */}
