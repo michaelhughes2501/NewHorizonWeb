@@ -232,7 +232,7 @@ function Overview() {
 
       {/* Metric grid */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:28 }}>
-        {cards.map((c,i) => <MetricCard key={i} {...c} />)}
+        {cards.map((c) => <MetricCard key={c.label} {...c} />)}
       </div>
 
       {/* Recent activity */}
