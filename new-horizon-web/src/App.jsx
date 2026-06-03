@@ -1247,6 +1247,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
   const set = (k,v) => setForm(p=>({...p,[k]:v}));
 
   const save = async () => {
+    setSaved(false);
     setSaveErr("");
     const nextUser = { ...user, ...form, interests:form.interests.split(",").map(i=>i.trim()).filter(Boolean) };
     try {

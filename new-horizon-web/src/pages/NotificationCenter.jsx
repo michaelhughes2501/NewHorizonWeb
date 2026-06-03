@@ -245,9 +245,14 @@ export default function NotificationCenter() {
     setNotifs(p => p.filter(n => n.id !== id));
   };
 
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const showToast = (msg) => {
     setToast(msg);
-    setTimeout(() => setToast(""), 3500);
   };
 
   const savePrefs = async () => {
