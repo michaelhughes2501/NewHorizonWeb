@@ -33,10 +33,13 @@ const EMAIL_TEMPLATES = [
   { name:"Account Verification", trigger:"On signup", subject:"Verify your New Horizon email", status:"Active" },
 ];
 
-const fontLink = document.createElement("link");
-fontLink.rel = "stylesheet";
-fontLink.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap";
-document.head.appendChild(fontLink);
+if (!document.getElementById("nh-fonts")) {
+  const fontLink = document.createElement("link");
+  fontLink.id = "nh-fonts";
+  fontLink.rel = "stylesheet";
+  fontLink.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap";
+  document.head.appendChild(fontLink);
+}
 
 const css = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -50,9 +53,12 @@ input{font-family:'DM Sans',sans-serif}
 .notif-row{transition:background .15s;cursor:pointer}
 .notif-row:hover{background:${T.ivory}!important}
 `;
-const s = document.createElement("style");
-s.textContent = css;
-document.head.appendChild(s);
+if (!document.getElementById("nh-notif-styles")) {
+  const s = document.createElement("style");
+  s.id = "nh-notif-styles";
+  s.textContent = css;
+  document.head.appendChild(s);
+}
 
 const hasConfiguredValue = (value, placeholder) => Boolean(value && value !== placeholder);
 const BACKEND_READY = hasConfiguredValue(import.meta.env.VITE_SUPABASE_URL, "https://YOUR_PROJECT.supabase.co")
@@ -239,9 +245,14 @@ export default function NotificationCenter() {
     setNotifs(p => p.filter(n => n.id !== id));
   };
 
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3500);
+  };
+
   const savePrefs = async () => {
     if (!BACKEND_READY || !profile?.id) {
-      setToast("Preferences are saved locally in demo mode.");
+      showToast("Preferences are saved locally in demo mode.");
       return;
     }
     try {
@@ -249,9 +260,9 @@ export default function NotificationCenter() {
         push_notifs: prefs.push,
         email_notifs: prefs.email,
       });
-      setToast("Notification preferences saved.");
+      showToast("Notification preferences saved.");
     } catch {
-      setToast("Could not save preferences right now.");
+      showToast("Could not save preferences right now.");
     }
   };
 

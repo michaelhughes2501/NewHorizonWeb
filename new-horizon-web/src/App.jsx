@@ -8,10 +8,13 @@ import {
   ProfileService,
 } from "./services/database-service.js";
 
-const fontLink = document.createElement("link");
-fontLink.rel = "stylesheet";
-fontLink.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap";
-document.head.appendChild(fontLink);
+if (!document.getElementById("nh-fonts")) {
+  const fontLink = document.createElement("link");
+  fontLink.id = "nh-fonts";
+  fontLink.rel = "stylesheet";
+  fontLink.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap";
+  document.head.appendChild(fontLink);
+}
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 const T = {
@@ -44,7 +47,12 @@ a{text-decoration:none;color:inherit}
 .hover-lift:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.1)}
 .hover-gold:hover{color:${T.gold}!important}
 `;
-const s = document.createElement("style"); s.textContent = injectCSS; document.head.appendChild(s);
+if (!document.getElementById("nh-styles")) {
+  const s = document.createElement("style");
+  s.id = "nh-styles";
+  s.textContent = injectCSS;
+  document.head.appendChild(s);
+}
 
 // ─── AUTH CONTEXT ─────────────────────────────────────────────────────────────
 const AuthCtx = createContext(null);
@@ -248,7 +256,7 @@ const Btn = ({ children, onClick, variant="primary", size="md", full=false, disa
   };
   const sizes = { sm:"7px 14px", md:"10px 22px", lg:"13px 30px" };
   return (
-    <button onClick={onClick} disabled={disabled||loading} style={{ ...styles[variant], padding:sizes[size], borderRadius:8, fontWeight:500, fontSize:size==="sm"?12:14, width:full?"100%":"auto", opacity:(disabled||loading)?.6:1, cursor:(disabled||loading)?"not-allowed":"pointer", display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+    <button onClick={onClick} disabled={disabled||loading} style={{ ...styles[variant], padding:sizes[size], borderRadius:8, fontWeight:500, fontSize:size==="sm"?12:14, width:full?"100%":"auto", opacity:(disabled||loading)?0.6:1, cursor:(disabled||loading)?"not-allowed":"pointer", display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6 }}>
       {loading && <span style={{ width:12, height:12, borderRadius:"50%", border:`2px solid rgba(255,255,255,.3)`, borderTopColor:"white", animation:"spin .7s linear infinite", display:"inline-block" }} />}
       {children}
     </button>
@@ -264,7 +272,7 @@ const Card = ({ children, style={}, className="" }) => (
 );
 
 const Toast = ({ msg, type="success", onClose }) => {
-  useEffect(() => { const t = setTimeout(onClose, 3500); return ()=>clearTimeout(t); }, []);
+  useEffect(() => { const t = setTimeout(onClose, 3500); return ()=>clearTimeout(t); }, [onClose]);
   const colors = { success:[T.success, T.successL], error:[T.rose, T.roseL], info:[T.info, T.infoL] };
   const [fg, bg] = colors[type]||colors.success;
   return (
@@ -1234,10 +1242,12 @@ function BlogPage({ posts, user, backendReady }) {
 function ProfilePage({ user, setUser, onLogout, backendReady }) {
   const [form, setForm] = useState({ name:user?.name||"", age:user?.age||"", state:user?.state||"", bio:user?.bio||"", offense:user?.offense||"Non-violent", interests:user?.interests?.join(", ")||"", notifications:true, publicProfile:true, showState:true });
   const [saved, setSaved] = useState(false);
+  const [saveErr, setSaveErr] = useState("");
   const [tab, setTab] = useState("edit");
   const set = (k,v) => setForm(p=>({...p,[k]:v}));
 
   const save = async () => {
+    setSaveErr("");
     const nextUser = { ...user, ...form, interests:form.interests.split(",").map(i=>i.trim()).filter(Boolean) };
     try {
       if (backendReady && user?.id) {
@@ -1257,7 +1267,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
       setSaved(true);
       setTimeout(()=>setSaved(false),2500);
     } catch (error) {
-      setSaved(false);
+      setSaveErr(error?.message || "Could not save profile. Please try again.");
     }
   };
 
@@ -1334,9 +1344,10 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
               <input value={form.interests} onChange={e=>set("interests",e.target.value)} placeholder="Music, Cooking, Sports..." />
             </div>
           </div>
-          <div style={{ marginTop:20, display:"flex", alignItems:"center", gap:14 }}>
+          <div style={{ marginTop:20, display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
             <Btn onClick={save}>Save Changes</Btn>
             {saved && <span style={{ color:T.success, fontSize:14, animation:"fadeIn .3s ease" }}>✓ Profile updated!</span>}
+            {saveErr && <span style={{ color:T.rose, fontSize:13 }}>{saveErr}</span>}
           </div>
         </div>
       )}
