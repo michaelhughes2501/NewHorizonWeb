@@ -15,10 +15,13 @@ const T = {
   sidebar:"#141416",
 };
 
-const fontLink = document.createElement("link");
-fontLink.rel = "stylesheet";
-fontLink.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap";
-document.head.appendChild(fontLink);
+if (!document.getElementById("nh-fonts")) {
+  const fontLink = document.createElement("link");
+  fontLink.id = "nh-fonts";
+  fontLink.rel = "stylesheet";
+  fontLink.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap";
+  document.head.appendChild(fontLink);
+}
 
 const css = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -34,7 +37,12 @@ input,select,textarea{font-family:'DM Sans',sans-serif;outline:none}
 .stat-card{transition:transform .2s,box-shadow .2s}
 .stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.08)}
 `;
-const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s);
+if (!document.getElementById("nh-admin-styles")) {
+  const s = document.createElement("style");
+  s.id = "nh-admin-styles";
+  s.textContent = css;
+  document.head.appendChild(s);
+}
 
 // ─── MOCK DATA ─────────────────────────────────────────────────────────────────
 const STATS = {
