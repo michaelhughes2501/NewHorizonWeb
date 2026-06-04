@@ -19,6 +19,7 @@ if (!document.getElementById("nh-fonts")) {
   const fontLink = document.createElement("link");
   fontLink.id = "nh-fonts";
   fontLink.rel = "stylesheet";
+  fontLink.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap";
   fontLink.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap";
   document.head.appendChild(fontLink);
 }

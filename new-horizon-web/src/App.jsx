@@ -1243,6 +1243,9 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
   const [form, setForm] = useState({ name:user?.name||"", age:user?.age||"", state:user?.state||"", bio:user?.bio||"", offense:user?.offense||"Non-violent", interests:user?.interests?.join(", ")||"", notifications:true, publicProfile:true, showState:true });
   const [saved, setSaved] = useState(false);
   const [saveErr, setSaveErr] = useState("");
+  const [tab, _setTab] = useState("edit");
+  const setTab = (nextTab) => { setSaveErr(""); _setTab(nextTab); };
+  const set = (k,v) => { setSaveErr(""); setForm(p=>({...p,[k]:v})); };
   const [tab, setTab] = useState("edit");
   const set = (k,v) => setForm(p=>({...p,[k]:v}));
 
