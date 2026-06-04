@@ -1246,6 +1246,8 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
   const [tab, _setTab] = useState("edit");
   const setTab = (nextTab) => { setSaveErr(""); _setTab(nextTab); };
   const set = (k,v) => { setSaveErr(""); setForm(p=>({...p,[k]:v})); };
+  const [tab, setTab] = useState("edit");
+  const set = (k,v) => setForm(p=>({...p,[k]:v}));
 
   const save = async () => {
     setSaved(false);
