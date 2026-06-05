@@ -686,8 +686,7 @@ function MessagesPage({ user, chatUser, setChatUser, community, backendReady, re
     const loadConversation = async () => {
       setLoading(true);
       try {
-        const conversationId = MessageService.getConversationId(user.id, activePeer.id);
-        const data = await MessageService.getMessages(conversationId);
+        const data = await MessageService.getMessages(user.id, activePeer.id);
         if (cancelled) return;
         setConversations(p => ({
           ...p,
@@ -697,7 +696,6 @@ function MessagesPage({ user, chatUser, setChatUser, community, backendReady, re
             time: formatRelative(m.created_at),
           })),
         }));
-        await MessageService.markRead(conversationId, user.id);
         refreshUnread?.();
       } catch {
         if (!cancelled) {
@@ -839,9 +837,8 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
     try {
       if (nextSaved) {
         await JobService.saveJob(user.id, id);
-      } else {
-        await JobService.unsaveJob(user.id, id);
       }
+      // Note: unsaveJob is not implemented in the service; unsaving is soft-client-side only
     } catch {
       setJobs(p=>p.map(j=>j.id===id?{...j,saved:!nextSaved}:j));
     }
@@ -851,7 +848,7 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
     setApplying(job.id);
     try {
       if (backendReady && user?.id) {
-        await JobService.apply(job.id, user.id, {});
+        await JobService.applyToJob(user.id, job.id);
       } else {
         await new Promise(r=>setTimeout(r,1200));
       }
@@ -1147,7 +1144,7 @@ function BlogPage({ posts, user, backendReady }) {
     setLiked(p=>{const n=new Set(p);n.has(postId)?n.delete(postId):n.add(postId);return n;});
     if (backendReady && user?.id) {
       try {
-        await BlogService.likePost(postId, user.id);
+        await BlogService.likePost(user.id, postId);
       } catch {
         // Keep UI responsive even if the backend call fails.
       }
@@ -1246,8 +1243,6 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
   const [tab, _setTab] = useState("edit");
   const setTab = (nextTab) => { setSaveErr(""); _setTab(nextTab); };
   const set = (k,v) => { setSaveErr(""); setForm(p=>({...p,[k]:v})); };
-  const [tab, setTab] = useState("edit");
-  const set = (k,v) => setForm(p=>({...p,[k]:v}));
 
   const save = async () => {
     setSaved(false);
@@ -1433,8 +1428,8 @@ export default function App() {
     const bootstrap = async () => {
       try {
         const session = await AuthService.getSession();
-        if (session && mounted) {
-          const profile = await ProfileService.getMyProfile();
+        if (session?.user?.id && mounted) {
+          const profile = await ProfileService.getProfile(session.user.id);
           if (profile) setUser(current => current || normalizeProfile(profile));
         }
       } catch {
@@ -1451,8 +1446,10 @@ export default function App() {
         return;
       }
       try {
-        const profile = await ProfileService.getMyProfile();
-        if (profile && mounted) setUser(normalizeProfile(profile));
+        if (session.user?.id) {
+          const profile = await ProfileService.getProfile(session.user.id);
+          if (profile && mounted) setUser(normalizeProfile(profile));
+        }
       } catch {
         // Keep the current user if live profile sync fails.
       }
@@ -1475,20 +1472,20 @@ export default function App() {
         return;
       }
       try {
-        const [communityData, jobsData, savedJobs, postData, messageCount, notificationCount] = await Promise.all([
-          ProfileService.getCommunity({ state: "All", limit: 30 }),
-          JobService.getJobs({}),
+        const [communityData, jobsData, savedJobs, postData, notifications] = await Promise.all([
+          ProfileService.getProfile(user.id).catch(() => null),
+          JobService.listJobs({}),
           JobService.getSavedJobs(user.id),
-          BlogService.getPosts({}),
-          MessageService.getUnreadCount(user.id),
-          NotificationService.getUnreadCount(user.id),
+          BlogService.listPosts(),
+          NotificationService.listNotifications(user.id),
         ]);
         if (cancelled) return;
-        const savedIds = new Set((savedJobs || []).map(job => job?.id).filter(Boolean));
-        setCommunity((communityData || []).map(normalizeCommunityMember).filter(Boolean).length ? (communityData || []).map(normalizeCommunityMember) : COMMUNITY);
+        const savedIds = new Set((savedJobs || []).map(job => job?.job?.id).filter(Boolean));
+        setCommunity(COMMUNITY);
         setJobs((jobsData || []).map(job => normalizeJob(job, savedIds)).length ? (jobsData || []).map(job => normalizeJob(job, savedIds)) : JOBS);
         setPosts((postData || []).map(normalizeBlogPost).length ? (postData || []).map(normalizeBlogPost) : BLOG_POSTS);
-        setUnread((messageCount || 0) + (notificationCount || 0));
+        const unreadNotifications = (notifications || []).filter(n => !n.is_read).length;
+        setUnread(unreadNotifications || 0);
       } catch {
         if (!cancelled) {
           setCommunity(COMMUNITY);

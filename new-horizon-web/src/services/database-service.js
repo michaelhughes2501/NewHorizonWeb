@@ -228,7 +228,8 @@ export const BlogService = {
 
   async likePost(userId, postId) {
     const { error } = await supabase.from('blog_likes').insert({ user_id: userId, post_id: postId })
-    if (!error) await supabase.rpc('increment_post_likes', { post_id: postId })
+    if (error) throw error
+    await supabase.rpc('increment_post_likes', { post_id: postId })
   },
 }
 
@@ -245,11 +246,13 @@ export const NotificationService = {
   },
 
   async markRead(notificationId) {
-    await supabase.from('notifications').update({ is_read: true }).eq('id', notificationId)
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', notificationId)
+    if (error) throw error
   },
 
   async markAllRead(userId) {
-    await supabase.from('notifications').update({ is_read: true }).eq('user_id', userId)
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', userId)
+    if (error) throw error
   },
 
   subscribeToNotifications(userId, callback) {
