@@ -6,20 +6,21 @@ const supabase = createClient(
 )
 
 export const AuthService = {
-  async signUp(email, password, username) {
+  async signUp({ email, password, name, username } = {}) {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
     if (data.user) {
-      await supabase.from('profiles').insert({
+      const { error: insertError } = await supabase.from('profiles').insert({
         id: data.user.id,
-        username,
+        username: username || name,
         email,
       })
+      if (insertError) console.error('Profile insert failed:', insertError)
     }
     return data
   },
 
-  async signIn(email, password) {
+  async signIn({ email, password } = {}) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
     return data
@@ -65,6 +66,20 @@ export const ProfileService = {
     return data
   },
 
+  async getMyProfile() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+    return ProfileService.getProfile(user.id)
+  },
+
+  async getCommunity({ state: stateFilter, limit = 30 } = {}) {
+    let query = supabase.from('profiles').select('*').limit(limit)
+    if (stateFilter && stateFilter !== 'All') query = query.eq('state', stateFilter)
+    const { data, error } = await query
+    if (error) throw error
+    return data
+  },
+
   async updateProfile(userId, updates) {
     const { data, error } = await supabase
       .from('profiles')
@@ -90,6 +105,10 @@ export const ProfileService = {
 }
 
 export const JobService = {
+  async getJobs(filters = {}) {
+    return JobService.listJobs(filters)
+  },
+
   async listJobs(filters = {}) {
     let query = supabase.from('jobs').select('*').eq('is_approved', true).order('created_at', { ascending: false })
     if (filters.location) query = query.ilike('location', `%${filters.location}%`)
@@ -141,6 +160,16 @@ export const JobService = {
 }
 
 export const MessageService = {
+  async getUnreadCount(userId) {
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', userId)
+      .eq('is_read', false)
+    if (error) throw error
+    return count ?? 0
+  },
+
   async listConversations(userId) {
     const { data, error } = await supabase
       .from('messages')
@@ -196,6 +225,10 @@ export const MessageService = {
 }
 
 export const BlogService = {
+  async getPosts(filters = {}) {
+    return BlogService.listPosts(filters.limit)
+  },
+
   async listPosts(limit = 20) {
     const { data, error } = await supabase
       .from('blog_posts')
@@ -234,6 +267,16 @@ export const BlogService = {
 }
 
 export const NotificationService = {
+  async getUnreadCount(userId) {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false)
+    if (error) throw error
+    return count ?? 0
+  },
+
   async listNotifications(userId) {
     const { data, error } = await supabase
       .from('notifications')
