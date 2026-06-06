@@ -16,7 +16,7 @@ export const AuthService = {
         name: name || username,
         email,
       })
-      if (insertError) console.error('Profile insert failed:', insertError)
+      if (insertError) throw insertError
     }
     return data
   },
@@ -226,8 +226,8 @@ export const MessageService = {
 }
 
 export const BlogService = {
-  async getPosts(filters = {}) {
-    return BlogService.listPosts(filters.limit)
+  async getPosts(limit) {
+    return BlogService.listPosts(limit)
   },
 
   async listPosts(limit = 20) {
@@ -295,7 +295,7 @@ export const NotificationService = {
   },
 
   async markAllRead(userId) {
-    const { error } = await supabase.from('notifications').update({ read: true, read_at: new Date().toISOString() }).eq('user_id', userId)
+    const { error } = await supabase.from('notifications').update({ read: true, read_at: new Date().toISOString() }).eq('user_id', userId).eq('read', false)
     if (error) throw error
   },
 
