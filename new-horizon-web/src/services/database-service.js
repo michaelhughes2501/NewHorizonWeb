@@ -12,7 +12,8 @@ export const AuthService = {
     if (data.user) {
       const { error: insertError } = await supabase.from('profiles').insert({
         id: data.user.id,
-        username: username || name,
+        auth_id: data.user.id,
+        name: name || username,
         email,
       })
       if (insertError) console.error('Profile insert failed:', insertError)
@@ -165,7 +166,7 @@ export const MessageService = {
       .from('messages')
       .select('*', { count: 'exact', head: true })
       .eq('recipient_id', userId)
-      .eq('is_read', false)
+      .eq('read', false)
     if (error) throw error
     return count ?? 0
   },
@@ -193,7 +194,7 @@ export const MessageService = {
       .or(`and(sender_id.eq.${userId},recipient_id.eq.${partnerId}),and(sender_id.eq.${partnerId},recipient_id.eq.${userId})`)
       .order('created_at')
     if (error) throw error
-    await supabase.from('messages').update({ is_read: true }).eq('sender_id', partnerId).eq('recipient_id', userId).eq('is_read', false)
+    await supabase.from('messages').update({ read: true, read_at: new Date().toISOString() }).eq('sender_id', partnerId).eq('recipient_id', userId).eq('read', false)
     return data
   },
 
@@ -272,7 +273,7 @@ export const NotificationService = {
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .eq('is_read', false)
+      .eq('read', false)
     if (error) throw error
     return count ?? 0
   },
@@ -289,12 +290,12 @@ export const NotificationService = {
   },
 
   async markRead(notificationId) {
-    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', notificationId)
+    const { error } = await supabase.from('notifications').update({ read: true, read_at: new Date().toISOString() }).eq('id', notificationId)
     if (error) throw error
   },
 
   async markAllRead(userId) {
-    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', userId)
+    const { error } = await supabase.from('notifications').update({ read: true, read_at: new Date().toISOString() }).eq('user_id', userId)
     if (error) throw error
   },
 
