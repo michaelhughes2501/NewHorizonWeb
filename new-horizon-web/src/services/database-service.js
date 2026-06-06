@@ -16,7 +16,7 @@ export const AuthService = {
         name: name || username,
         email,
       })
-      if (insertError) console.error('Profile insert failed:', insertError)
+      if (insertError) throw insertError
     }
     return data
   },
