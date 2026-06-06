@@ -255,7 +255,6 @@ export default function NotificationCenter() {
   const showToast = (msg) => {
     setToast(msg);
   };
-  const showToast = (msg) => setToast(msg);
 
   const savePrefs = async () => {
     if (!BACKEND_READY || !profile?.id) {
