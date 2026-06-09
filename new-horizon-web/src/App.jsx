@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { useState, useEffect, useRef, createContext, useContext, useMemo } from "react";
 import {
   AuthService,
   BlogService,
@@ -1813,14 +1813,14 @@ function ConnectPage({ setPage, setChatUser, community, user, backendReady }) {
   const [liked, setLiked] = useState(new Set());
   const [toast, setToast] = useState(null);
   const people = community.filter((u) => u.id !== user?.id);
-  const allInterests = [
-    "All",
-    ...new Set(people.flatMap((u) => u.interests || [])),
-  ];
-  const stateOptions = [
-    "All",
-    ...new Set(people.map((u) => u.state).filter(Boolean)),
-  ];
+  const allInterests = useMemo(
+    () => ["All", ...new Set(people.flatMap((u) => u.interests || []))],
+    [people],
+  );
+  const stateOptions = useMemo(
+    () => ["All", ...new Set(people.map((u) => u.state).filter(Boolean))],
+    [people],
+  );
   const filtered = people.filter(
     (u) =>
       (filter.state === "All" || u.state === filter.state) &&
