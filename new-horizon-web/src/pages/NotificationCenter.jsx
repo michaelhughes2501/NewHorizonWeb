@@ -120,8 +120,6 @@ if (!document.getElementById("nh-fonts")) {
   fontLink.id = "nh-fonts";
   fontLink.rel = "stylesheet";
   fontLink.href =
-    "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap";
-  fontLink.href =
     "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap";
   document.head.appendChild(fontLink);
 }
@@ -152,12 +150,14 @@ const BACKEND_READY =
     import.meta.env.VITE_SUPABASE_URL,
     "https://YOUR_PROJECT.supabase.co",
   ) &&
-  hasConfiguredValue(import.meta.env.VITE_SUPABASE_URL, "placeholder") &&
   (hasConfiguredValue(
     import.meta.env.VITE_SUPABASE_ANON_KEY,
     "YOUR_ANON_KEY",
   ) ||
-    hasConfiguredValue(import.meta.env.VITE_SUPABASE_ANON_KEY, "placeholder"));
+    hasConfiguredValue(
+      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      "sb_publishable_xxxxxxxxxxxxxxxxxxxx",
+    ));
 
 function fmtRelative(value) {
   if (!value) return "Now";
