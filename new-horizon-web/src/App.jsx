@@ -40,11 +40,14 @@ const T = {
 const injectCSS = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'DM Sans',sans-serif;background:${T.ivory};color:${T.charcoal};overflow-x:hidden}
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:${T.mist}}::-webkit-scrollbar-thumb{background:${T.gold};border-radius:3px}
-input,textarea,select{font-family:'DM Sans',sans-serif;outline:none;border:1px solid ${T.mist};background:white;color:${T.charcoal};padding:10px 14px;border-radius:8px;font-size:14px;transition:border-color .2s;width:100%}
-input:focus,textarea:focus,select:focus{border-color:${T.gold};box-shadow:0 0 0 3px ${T.gold}18}
+body{font-family:'DM Sans',sans-serif;background:${T.ivory};color:${T.charcoal};overflow-x:hidden;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;background-image:radial-gradient(circle at 0% 0%,${T.gold}0d,transparent 42%),radial-gradient(circle at 100% 0%,${T.goldL}0a,transparent 38%);background-attachment:fixed}
+::-webkit-scrollbar{width:7px;height:7px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${T.gold}66;border-radius:4px}::-webkit-scrollbar-thumb:hover{background:${T.gold}}
+::selection{background:${T.gold}33;color:${T.charcoal}}
+input,textarea,select{font-family:'DM Sans',sans-serif;outline:none;border:1px solid ${T.mist};background:white;color:${T.charcoal};padding:11px 14px;border-radius:10px;font-size:14px;transition:border-color .2s,box-shadow .2s;width:100%}
+input:focus,textarea:focus,select:focus{border-color:${T.gold};box-shadow:0 0 0 3px ${T.gold}26}
+input::placeholder,textarea::placeholder{color:${T.slate}99}
 button{font-family:'DM Sans',sans-serif;cursor:pointer;border:none;transition:all .18s}
+button:focus-visible,a:focus-visible{outline:2px solid ${T.gold};outline-offset:2px}
 a{text-decoration:none;color:inherit}
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -53,12 +56,22 @@ a{text-decoration:none;color:inherit}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 @keyframes ripple{0%{transform:scale(0);opacity:1}100%{transform:scale(2.5);opacity:0}}
 @keyframes notifBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
-.fade-up{animation:fadeUp .55s ease both}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.fade-up{animation:fadeUp .55s cubic-bezier(.16,1,.3,1) both}
 .fade-in{animation:fadeIn .4s ease both}
 .slide-in{animation:slideIn .35s ease both}
-.hover-lift{transition:transform .22s,box-shadow .22s}
-.hover-lift:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.1)}
+.hover-lift{transition:transform .25s cubic-bezier(.16,1,.3,1),box-shadow .25s cubic-bezier(.16,1,.3,1)}
+.hover-lift:hover{transform:translateY(-4px);box-shadow:0 18px 40px -12px ${T.charcoal}26}
 .hover-gold:hover{color:${T.gold}!important}
+.nh-btn:not(:disabled):hover{transform:translateY(-2px);filter:brightness(1.04)}
+.nh-btn:not(:disabled):active{transform:translateY(0)}
+.gold-text{background:linear-gradient(120deg,${T.gold},${T.goldL});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.nav-item{position:relative;transition:background .18s,color .18s}
+.nav-item::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%) scaleY(0);height:60%;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(${T.gold},${T.goldL});transition:transform .22s cubic-bezier(.16,1,.3,1)}
+.nav-item:hover{background:${T.gold}0f}
+.nav-item.active::before{transform:translateY(-50%) scaleY(1)}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 `;
 if (!document.getElementById("nh-styles")) {
   const s = document.createElement("style");
@@ -742,6 +755,7 @@ const Btn = ({
       background: `linear-gradient(135deg,${T.gold},${T.goldL})`,
       color: "white",
       border: "none",
+      boxShadow: `0 8px 20px -8px ${T.gold}99`,
     },
     outline: {
       background: "transparent",
@@ -753,18 +767,29 @@ const Btn = ({
       color: T.slate,
       border: `1px solid ${T.mist}`,
     },
-    danger: { background: T.rose, color: "white", border: "none" },
-    success: { background: T.success, color: "white", border: "none" },
+    danger: {
+      background: T.rose,
+      color: "white",
+      border: "none",
+      boxShadow: `0 8px 20px -8px ${T.rose}80`,
+    },
+    success: {
+      background: T.success,
+      color: "white",
+      border: "none",
+      boxShadow: `0 8px 20px -8px ${T.success}80`,
+    },
   };
   const sizes = { sm: "7px 14px", md: "10px 22px", lg: "13px 30px" };
   return (
     <button
       onClick={onClick}
       disabled={disabled || loading}
+      className="nh-btn"
       style={{
         ...styles[variant],
         padding: sizes[size],
-        borderRadius: 8,
+        borderRadius: 10,
         fontWeight: 500,
         fontSize: size === "sm" ? 12 : 14,
         width: full ? "100%" : "auto",
@@ -1056,6 +1081,8 @@ function AuthPage({ onAuth, backendReady }) {
                 justifyContent: "center",
                 color: "white",
                 fontSize: 18,
+                boxShadow: `0 8px 20px -6px ${T.gold}80`,
+                animation: "float 5s ease-in-out infinite",
               }}
             >
               ✦
@@ -1074,16 +1101,16 @@ function AuthPage({ onAuth, backendReady }) {
           <h2
             style={{
               fontFamily: "'Cormorant Garamond',serif",
-              fontSize: 42,
+              fontSize: 44,
               fontWeight: 300,
               color: "white",
-              lineHeight: 1.2,
+              lineHeight: 1.15,
               marginBottom: 20,
             }}
           >
             Your Next Chapter
             <br />
-            <em style={{ color: T.gold }}>Begins Today</em>
+            <em className="gold-text">Begins Today</em>
           </h2>
           <p
             style={{
@@ -1112,6 +1139,7 @@ function AuthPage({ onAuth, backendReady }) {
             ].map(([n, l]) => (
               <div
                 key={l}
+                className="hover-lift"
                 style={{
                   background: "rgba(255,255,255,.06)",
                   borderRadius: 12,
@@ -1404,6 +1432,8 @@ function SideNav({ page, setPage, user, notifs }) {
           <button
             key={n.id}
             onClick={() => setPage(n.id)}
+            className={`nav-item${page === n.id ? " active" : ""}`}
+            aria-current={page === n.id ? "page" : undefined}
             style={{
               width: "100%",
               display: "flex",
@@ -1412,13 +1442,12 @@ function SideNav({ page, setPage, user, notifs }) {
               padding: "10px 12px",
               borderRadius: 10,
               border: "none",
-              background: page === n.id ? T.gold + "12" : "transparent",
+              background: page === n.id ? T.gold + "14" : "transparent",
               color: page === n.id ? T.gold : T.slate,
-              fontWeight: page === n.id ? 500 : 400,
+              fontWeight: page === n.id ? 600 : 400,
               fontSize: 14,
               marginBottom: 2,
               textAlign: "left",
-              position: "relative",
             }}
           >
             <span style={{ fontSize: 15, width: 18, textAlign: "center" }}>
@@ -1527,23 +1556,65 @@ function Dashboard({ user, setPage, unread }) {
     },
   ];
 
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
   return (
     <div style={{ padding: "32px 36px", maxWidth: 1000, margin: "0 auto" }}>
-      <div style={{ marginBottom: 32, animation: "fadeUp .5s ease" }}>
-        <h1
+      <div
+        className="fade-up"
+        style={{
+          marginBottom: 32,
+          background: `linear-gradient(135deg,${T.charcoal},#2C2C30)`,
+          borderRadius: 18,
+          padding: "30px 32px",
+          position: "relative",
+          overflow: "hidden",
+          boxShadow: `0 18px 40px -16px ${T.charcoal}40`,
+        }}
+      >
+        <div
+          aria-hidden="true"
           style={{
-            fontFamily: "'Cormorant Garamond',serif",
-            fontSize: 36,
-            fontWeight: 300,
-            marginBottom: 6,
+            position: "absolute",
+            right: -60,
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: 260,
+            height: 260,
+            borderRadius: "50%",
+            background: `radial-gradient(circle,${T.gold}33,transparent 70%)`,
           }}
-        >
-          Good morning,{" "}
-          <em style={{ color: T.gold }}>{user?.name?.split(" ")[0]}</em> ✦
-        </h1>
-        <p style={{ color: T.slate, fontSize: 15 }}>
-          Here's what's happening in your community today.
-        </p>
+        />
+        <div style={{ position: "relative" }}>
+          <span
+            style={{
+              fontSize: 12,
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              color: T.goldL,
+              fontWeight: 500,
+            }}
+          >
+            New Horizon
+          </span>
+          <h1
+            style={{
+              fontFamily: "'Cormorant Garamond',serif",
+              fontSize: 38,
+              fontWeight: 300,
+              margin: "8px 0 6px",
+              color: "white",
+            }}
+          >
+            {greeting},{" "}
+            <em className="gold-text">{user?.name?.split(" ")[0]}</em>
+          </h1>
+          <p style={{ color: "#B6B6C4", fontSize: 15 }}>
+            Here's what's happening in your community today.
+          </p>
+        </div>
       </div>
 
       {/* Stats */}
@@ -1558,11 +1629,13 @@ function Dashboard({ user, setPage, unread }) {
         {stats.map((s, i) => (
           <div
             key={i}
+            className="hover-lift"
             style={{
               background: "white",
               borderRadius: 14,
               padding: "18px 20px",
               border: `1px solid ${T.mist}`,
+              boxShadow: `0 4px 14px -8px ${T.charcoal}1f`,
               animation: `fadeUp .5s ${i * 0.08}s ease both`,
             }}
           >
