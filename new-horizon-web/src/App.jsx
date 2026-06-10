@@ -3664,6 +3664,10 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
   const [saved, setSaved] = useState(false);
   const [saveErr, setSaveErr] = useState("");
   const [tab, _setTab] = useState("edit");
+  const [credEmail, setCredEmail] = useState(user?.email || "");
+  const [credPassword, setCredPassword] = useState("");
+  const [credSaving, setCredSaving] = useState(false);
+  const [credMsg, setCredMsg] = useState("");
   const setTab = (nextTab) => {
     setSaveErr("");
     _setTab(nextTab);
@@ -3709,6 +3713,24 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
       setTimeout(() => setSaved(false), 2500);
     } catch (error) {
       setSaveErr(error?.message || "Could not save profile. Please try again.");
+    }
+  };
+
+  const saveCredentials = async () => {
+    if (!credEmail && !credPassword) return;
+    setCredSaving(true);
+    setCredMsg("");
+    try {
+      await AuthService.updateCredentials({
+        email: credEmail || undefined,
+        password: credPassword || undefined,
+      });
+      setCredMsg("✓ Credentials updated");
+      setCredPassword("");
+    } catch (error) {
+      setCredMsg(error?.message || "Could not update credentials.");
+    } finally {
+      setCredSaving(false);
     }
   };
 
@@ -4146,7 +4168,12 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
               >
                 Email Address
               </label>
-              <input placeholder="your@email.com" />
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={credEmail}
+                onChange={(e) => { setCredEmail(e.target.value); setCredMsg(""); }}
+              />
             </div>
             <div>
               <label
@@ -4159,9 +4186,21 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
               >
                 New Password
               </label>
-              <input type="password" placeholder="••••••••" />
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={credPassword}
+                onChange={(e) => { setCredPassword(e.target.value); setCredMsg(""); }}
+              />
             </div>
-            <Btn size="sm">Update Credentials</Btn>
+            <Btn size="sm" onClick={saveCredentials} disabled={credSaving}>
+              {credSaving ? "Saving…" : "Update Credentials"}
+            </Btn>
+            {credMsg && (
+              <p style={{ fontSize: 13, color: credMsg.startsWith("✓") ? T.success : T.rose }}>
+                {credMsg}
+              </p>
+            )}
             <div style={{ paddingTop: 20, borderTop: `1px solid ${T.mist}` }}>
               <Btn variant="danger" size="sm" onClick={onLogout}>
                 Sign Out
@@ -4261,7 +4300,7 @@ export default function App() {
       try {
         const [communityData, jobsData, savedJobs, postData, notifications] =
           await Promise.all([
-            ProfileService.getProfile(user.id).catch(() => null),
+            ProfileService.getCommunity().catch(() => null),
             JobService.listJobs({}),
             JobService.getSavedJobs(user.id),
             BlogService.listPosts(),
@@ -4283,7 +4322,7 @@ export default function App() {
             : BLOG_POSTS,
         );
         const unreadNotifications = (notifications || []).filter(
-          (n) => !n.is_read,
+          (n) => !n.read,
         ).length;
         setUnread(unreadNotifications || 0);
       } catch {
