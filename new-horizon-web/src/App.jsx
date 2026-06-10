@@ -3717,12 +3717,13 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
   };
 
   const saveCredentials = async () => {
-    if (!credEmail && !credPassword) return;
+    const emailChanged = credEmail && credEmail !== user?.email;
+    if (!emailChanged && !credPassword) return;
     setCredSaving(true);
     setCredMsg("");
     try {
       await AuthService.updateCredentials({
-        email: credEmail || undefined,
+        email: emailChanged ? credEmail : undefined,
         password: credPassword || undefined,
       });
       setCredMsg("✓ Credentials updated");
