@@ -1,9 +1,70 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
+const PLACEHOLDERS = new Set([
+  '',
+  'https://your-project.supabase.co',
+  'https://YOUR_PROJECT.supabase.co',
+  'your-anon-key',
+  'YOUR_ANON_KEY',
+])
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+export const SUPABASE_CONFIGURED =
+  Boolean(supabaseUrl) &&
+  Boolean(supabaseAnonKey) &&
+  !PLACEHOLDERS.has(supabaseUrl) &&
+  !PLACEHOLDERS.has(supabaseAnonKey)
+
+// When Supabase is not configured (e.g. local preview / demo with no secrets),
+// expose a no-op client so importing this module never throws. The app falls
+// back to its built-in demo/mock data via the BACKEND_READY guard in App.jsx.
+const createStubClient = () => {
+  const notReady = () =>
+    Promise.reject(new Error('Supabase is not configured (preview/demo mode).'))
+  const queryBuilder = () => {
+    const builder = {
+      select: () => builder,
+      insert: () => builder,
+      update: () => builder,
+      delete: () => builder,
+      eq: () => builder,
+      or: () => builder,
+      ilike: () => builder,
+      order: () => builder,
+      limit: () => builder,
+      single: () => notReady(),
+      then: (resolve) => resolve({ data: [], error: null, count: 0 }),
+    }
+    return builder
+  }
+  const channel = () => {
+    const ch = { on: () => ch, subscribe: () => ch }
+    return ch
+  }
+  return {
+    auth: {
+      signUp: notReady,
+      signInWithPassword: notReady,
+      signOut: () => Promise.resolve({ error: null }),
+      getUser: () => Promise.resolve({ data: { user: null } }),
+      getSession: () => Promise.resolve({ data: { session: null } }),
+      onAuthStateChange: () => ({
+        data: { subscription: { unsubscribe: () => {} } },
+      }),
+    },
+    from: queryBuilder,
+    rpc: () => Promise.resolve({ data: null, error: null }),
+    channel,
+    removeChannel: () => {},
+    storage: { from: () => ({ upload: notReady, getPublicUrl: () => ({ data: { publicUrl: '' } }) }) },
+  }
+}
+
+const supabase = SUPABASE_CONFIGURED
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : createStubClient()
 
 export const AuthService = {
   async signUp({ email, password, name, username } = {}) {
