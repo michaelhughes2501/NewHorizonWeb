@@ -212,6 +212,15 @@ export const JobService = {
     return data
   },
 
+  async unsaveJob(userId, jobId) {
+    const { error } = await supabase
+      .from('saved_jobs')
+      .delete()
+      .eq('user_id', userId)
+      .eq('job_id', jobId)
+    if (error) throw error
+  },
+
   async applyToJob(userId, jobId) {
     const { data, error } = await supabase
       .from('job_applications')

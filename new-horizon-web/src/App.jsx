@@ -2562,8 +2562,9 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
     try {
       if (nextSaved) {
         await JobService.saveJob(user.id, id);
+      } else {
+        await JobService.unsaveJob(user.id, id);
       }
-      // Note: unsaveJob is not implemented in the service; unsaving is soft-client-side only
     } catch {
       setJobs((p) =>
         p.map((j) => (j.id === id ? { ...j, saved: !nextSaved } : j)),
@@ -3679,7 +3680,7 @@ function BlogPage({ posts, user, backendReady }) {
                   marginBottom: 14,
                 }}
               >
-                {b.excerpt.slice(0, 100)}...
+                {b.excerpt.length > 100 ? `${b.excerpt.slice(0, 100)}…` : b.excerpt}
               </p>
               <div
                 style={{
