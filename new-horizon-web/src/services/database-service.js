@@ -33,8 +33,9 @@ export const AuthService = {
   },
 
   async getUser() {
-    const { data: { user } } = await supabase.auth.getUser()
-    return user
+    const { data, error } = await supabase.auth.getUser()
+    if (error) throw error
+    return data?.user ?? null
   },
 
   onAuthStateChange(callback) {
@@ -54,6 +55,16 @@ export const AuthService = {
     const { data } = await supabase.auth.getSession()
     return data.session
   },
+
+  async updateCredentials({ email, password } = {}) {
+    const updates = {}
+    if (email) updates.email = email
+    if (password) updates.password = password
+    if (!Object.keys(updates).length) return
+    const { data, error } = await supabase.auth.updateUser(updates)
+    if (error) throw error
+    return data
+  },
 }
 
 export const ProfileService = {
@@ -68,9 +79,10 @@ export const ProfileService = {
   },
 
   async getMyProfile() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
-    return ProfileService.getProfile(user.id)
+    const { data, error } = await supabase.auth.getUser()
+    if (error) throw error
+    if (!data?.user) return null
+    return ProfileService.getProfile(data.user.id)
   },
 
   async getCommunity({ state: stateFilter, limit = 30 } = {}) {

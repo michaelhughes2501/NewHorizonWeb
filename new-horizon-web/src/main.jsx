@@ -1,7 +1,8 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import App from "./App.jsx";
+import { AuthService } from "./services/database-service.js";
 
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"));
 const NotificationCenter = lazy(() => import("./pages/NotificationCenter.jsx"));
@@ -12,7 +13,7 @@ function ProjectRouter() {
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/" element={<App />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
           <Route path="/notifications" element={<NotificationCenter />} />
           <Route path="/app" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFound />} />
@@ -20,6 +21,18 @@ function ProjectRouter() {
       </Suspense>
     </BrowserRouter>
   );
+}
+
+function AdminGuard({ children }) {
+  const [ready, setReady] = useState(false);
+  const [allowed, setAllowed] = useState(false);
+  useEffect(() => {
+    AuthService.getSession()
+      .then((session) => { setAllowed(!!session); setReady(true); })
+      .catch(() => setReady(true));
+  }, []);
+  if (!ready) return <LoadingScreen />;
+  return allowed ? children : <Navigate to="/" replace />;
 }
 
 function LoadingScreen() {
