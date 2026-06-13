@@ -502,7 +502,7 @@ function Dashboard({ user, setPage, unread }) {
       {/* Stats */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:28 }}>
         {stats.map((s,i)=>(
-          <div key={i} style={{ background:"white", borderRadius:14, padding:"18px 20px", border:`1px solid ${T.mist}`, animation:`fadeUp .5s ${i*.08}s ease both` }}>
+          <div key={s.label} style={{ background:"white", borderRadius:14, padding:"18px 20px", border:`1px solid ${T.mist}`, animation:`fadeUp .5s ${i*.08}s ease both` }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
               <span style={{ fontSize:20 }}>{s.icon}</span>
               <span style={{ fontSize:11, color:s.color, background:s.color+"15", padding:"2px 8px", borderRadius:10, fontWeight:500 }}>↑</span>
