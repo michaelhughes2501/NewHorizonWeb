@@ -1628,7 +1628,7 @@ function Dashboard({ user, setPage, unread }) {
       >
         {stats.map((s, i) => (
           <div
-            key={i}
+            key={s.label}
             className="hover-lift"
             style={{
               background: "white",
