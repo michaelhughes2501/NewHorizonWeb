@@ -2137,6 +2137,7 @@ function MessagesPage({
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sendError, setSendError] = useState(null);
   const messagesEnd = useRef(null);
   const activePeer = chatUser || conversationList[0] || community[0];
   const msgs = conversations[activePeer?.id] || [];
@@ -2203,6 +2204,9 @@ function MessagesPage({
           ...p,
           [activePeer.id]: (p[activePeer.id] || []).slice(0, -1),
         }));
+        setSendError("Message failed to send. Please try again.");
+        setTimeout(() => setSendError(null), 4000);
+        return;
       }
     }
     setTyping(true);
@@ -2484,11 +2488,15 @@ function MessagesPage({
         </div>
 
         {/* Input */}
+        <div style={{ background: "white", borderTop: `1px solid ${T.mist}` }}>
+          {sendError && (
+            <div style={{ color: "#c0392b", fontSize: 12, padding: "4px 20px 0" }}>
+              {sendError}
+            </div>
+          )}
         <div
           style={{
             padding: "12px 20px",
-            background: "white",
-            borderTop: `1px solid ${T.mist}`,
             display: "flex",
             gap: 10,
             alignItems: "flex-end",
@@ -2516,6 +2524,7 @@ function MessagesPage({
           <Btn onClick={sendMsg} size="sm">
             Send ↑
           </Btn>
+        </div>
         </div>
       </div>
     </div>
