@@ -976,37 +976,38 @@ function AuthPage({ onAuth, backendReady }) {
   const submit = async () => {
     setErr("");
     setLoading(true);
+    if (!backendReady) {
+      try {
+        const u = USERS_DB[form.email];
+        if (mode === "login") {
+          if (!u || u.password !== form.password)
+            throw new Error("Invalid email or password.");
+          await onAuth({ mode: "demo-login", user: u });
+          return;
+        }
+        if (!form.name || !form.email || !form.password)
+          throw new Error("All fields required.");
+        if (form.password !== form.confirmPassword)
+          throw new Error("Passwords don't match.");
+        const newUser = normalizeProfile({
+          id: `u_${Date.now()}`,
+          name: form.name,
+          email: form.email,
+          avatar: initialsFromName(form.name),
+          offense: "Prefer not to say",
+          joined: "Apr 2025",
+        });
+        await onAuth({ mode: "demo-register", user: newUser });
+        return;
+      } catch (demoError) {
+        setErr(demoError.message || "Something went wrong.");
+        setLoading(false);
+        return;
+      }
+    }
     try {
       await onAuth({ mode, form });
     } catch (error) {
-      if (!backendReady) {
-        try {
-          const u = USERS_DB[form.email];
-          if (mode === "login") {
-            if (!u || u.password !== form.password)
-              throw new Error("Invalid email or password.", { cause: error });
-            await onAuth({ mode: "demo-login", user: u });
-            return;
-          }
-          if (!form.name || !form.email || !form.password)
-            throw new Error("All fields required.", { cause: error });
-          if (form.password !== form.confirmPassword)
-            throw new Error("Passwords don't match.", { cause: error });
-          const newUser = normalizeProfile({
-            id: `u_${Date.now()}`,
-            name: form.name,
-            email: form.email,
-            avatar: initialsFromName(form.name),
-            offense: "Prefer not to say",
-            joined: "Apr 2025",
-          });
-          await onAuth({ mode: "demo-register", user: newUser });
-          return;
-        } catch (demoError) {
-          setErr(demoError.message || "Something went wrong.");
-          return;
-        }
-      }
       setErr(error.message || "Something went wrong.");
     } finally {
       setLoading(false);
@@ -2104,6 +2105,8 @@ function ConnectPage({ setPage, setChatUser, community, user, backendReady }) {
 }
 
 // ─── MESSAGES / REAL-TIME CHAT ────────────────────────────────────────────────
+const EMPTY_ARRAY = [];
+
 function MessagesPage({
   user,
   chatUser,
@@ -2120,10 +2123,7 @@ function MessagesPage({
   const messagesEnd = useRef(null);
   const conversationList = useMemo(() => community.slice(0, 8), [community]);
   const activePeer = chatUser || conversationList[0] || community[0];
-  const msgs = useMemo(
-    () => conversations[activePeer?.id] || [],
-    [conversations, activePeer?.id],
-  );
+  const msgs = conversations[activePeer?.id] || EMPTY_ARRAY;
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
