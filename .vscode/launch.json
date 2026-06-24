@@ -16,10 +16,7 @@
       "type": "chrome",
       "request": "launch",
       "url": "http://localhost:5173",
-      "webRoot": "${workspaceFolder}/new-horizon-web/src",
-      "sourceMapPathOverrides": {
-        "webpack:///src/*": "${webRoot}/*"
-      }
+      "webRoot": "${workspaceFolder}/new-horizon-web"
     }
   ],
   "compounds": [
