@@ -353,7 +353,7 @@ const RESOURCES = {
     },
     {
       name: "Authentic Connections",
-      url: "#",
+      url: "https://www.mentalhealthamerica.net/find-support-groups",
       tag: "Peer Support",
       desc: "Peer-led support groups run by returning citizens, for returning citizens.",
       icon: "🤝",
@@ -376,7 +376,7 @@ const RESOURCES = {
     },
     {
       name: "Homeward Bound Network",
-      url: "#",
+      url: "https://www.usich.gov/topics/reentry",
       tag: "National",
       desc: "Directory of sober living and transitional homes by state.",
       icon: "📍",
