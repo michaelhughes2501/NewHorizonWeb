@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 /**
  * NEW HORIZON — Admin Dashboard
@@ -387,32 +387,6 @@ const MetricCard = ({ icon, label, value, sub, color = T.gold, trend }) => (
     {sub && (
       <div style={{ fontSize: 11, color: T.slate, marginTop: 2 }}>{sub}</div>
     )}
-  </div>
-);
-
-const TableHeader = ({ cols }) => (
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: cols.join(" "),
-      padding: "10px 16px",
-      background: T.ivory,
-      borderBottom: `1px solid ${T.mist}`,
-      gap: 12,
-    }}
-  >
-    {cols.map((_, i, arr) => (
-      <div
-        key={i}
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          color: T.slate,
-          textTransform: "uppercase",
-          letterSpacing: "1px",
-        }}
-      ></div>
-    ))}
   </div>
 );
 
