@@ -186,7 +186,7 @@ export const JobService = {
   async listJobs(filters = {}) {
     let query = supabase.from('jobs').select('*').eq('is_approved', true).order('created_at', { ascending: false })
     if (filters.location) query = query.ilike('location', `%${filters.location}%`)
-    if (filters.fair_chance) query = query.eq('is_fair_chance', true)
+    if (filters.fair_chance) query = query.eq('felony_friendly', true)
     const { data, error } = await query
     if (error) throw error
     return data
@@ -224,7 +224,7 @@ export const JobService = {
   async applyToJob(userId, jobId) {
     const { data, error } = await supabase
       .from('job_applications')
-      .insert({ user_id: userId, job_id: jobId, status: 'applied' })
+      .insert({ user_id: userId, job_id: jobId, status: 'submitted' })
       .select()
       .single()
     if (error) throw error
@@ -256,7 +256,7 @@ export const MessageService = {
   async listConversations(userId) {
     const { data, error } = await supabase
       .from('messages')
-      .select('*, sender:profiles!sender_id(id, username), recipient:profiles!recipient_id(id, username)')
+      .select('*, sender:profiles!sender_id(id, name), recipient:profiles!recipient_id(id, name)')
       .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
       .order('created_at', { ascending: false })
     if (error) throw error
@@ -272,7 +272,7 @@ export const MessageService = {
   async getMessages(userId, partnerId) {
     const { data, error } = await supabase
       .from('messages')
-      .select('*, sender:profiles!sender_id(id, username)')
+      .select('*, sender:profiles!sender_id(id, name)')
       .or(`and(sender_id.eq.${userId},recipient_id.eq.${partnerId}),and(sender_id.eq.${partnerId},recipient_id.eq.${userId})`)
       .order('created_at')
     if (error) throw error
@@ -315,7 +315,7 @@ export const BlogService = {
   async listPosts(limit = 20) {
     const { data, error } = await supabase
       .from('blog_posts')
-      .select('*, author:profiles(id, username)')
+      .select('*, author:profiles(id, name)')
       .order('created_at', { ascending: false })
       .limit(limit)
     if (error) throw error
@@ -325,7 +325,7 @@ export const BlogService = {
   async getPost(id) {
     const { data, error } = await supabase
       .from('blog_posts')
-      .select('*, author:profiles(id, username)')
+      .select('*, author:profiles(id, name)')
       .eq('id', id)
       .single()
     if (error) throw error
