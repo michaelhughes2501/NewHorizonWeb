@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, createContext, useContext, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   AuthService,
   BlogService,
@@ -80,9 +80,6 @@ if (!document.getElementById("nh-styles")) {
   document.head.appendChild(s);
 }
 
-// ─── AUTH CONTEXT ─────────────────────────────────────────────────────────────
-const AuthCtx = createContext(null);
-const useAuth = () => useContext(AuthCtx);
 
 // ─── MOCK DATABASE ────────────────────────────────────────────────────────────
 const USERS_DB = {
@@ -836,21 +833,6 @@ const Badge = ({ children, color = T.gold, bg }) => (
   </span>
 );
 
-const Card = ({ children, style = {}, className = "" }) => (
-  <div
-    className={`hover-lift ${className}`}
-    style={{
-      background: "white",
-      borderRadius: 16,
-      border: `1px solid ${T.mist}`,
-      padding: 24,
-      ...style,
-    }}
-  >
-    {children}
-  </div>
-);
-
 const Toast = ({ msg, type = "success", onClose }) => {
   useEffect(() => {
     const t = setTimeout(onClose, 3500);
@@ -994,37 +976,38 @@ function AuthPage({ onAuth, backendReady }) {
   const submit = async () => {
     setErr("");
     setLoading(true);
+    if (!backendReady) {
+      try {
+        const u = USERS_DB[form.email];
+        if (mode === "login") {
+          if (!u || u.password !== form.password)
+            throw new Error("Invalid email or password.");
+          await onAuth({ mode: "demo-login", user: u });
+          return;
+        }
+        if (!form.name || !form.email || !form.password)
+          throw new Error("All fields required.");
+        if (form.password !== form.confirmPassword)
+          throw new Error("Passwords don't match.");
+        const newUser = normalizeProfile({
+          id: `u_${Date.now()}`,
+          name: form.name,
+          email: form.email,
+          avatar: initialsFromName(form.name),
+          offense: "Prefer not to say",
+          joined: "Apr 2025",
+        });
+        await onAuth({ mode: "demo-register", user: newUser });
+        return;
+      } catch (demoError) {
+        setErr(demoError.message || "Something went wrong.");
+        setLoading(false);
+        return;
+      }
+    }
     try {
       await onAuth({ mode, form });
     } catch (error) {
-      if (!backendReady) {
-        try {
-          const u = USERS_DB[form.email];
-          if (mode === "login") {
-            if (!u || u.password !== form.password)
-              throw new Error("Invalid email or password.");
-            await onAuth({ mode: "demo-login", user: u });
-            return;
-          }
-          if (!form.name || !form.email || !form.password)
-            throw new Error("All fields required.");
-          if (form.password !== form.confirmPassword)
-            throw new Error("Passwords don't match.");
-          const newUser = normalizeProfile({
-            id: `u_${Date.now()}`,
-            name: form.name,
-            email: form.email,
-            avatar: initialsFromName(form.name),
-            offense: "Prefer not to say",
-            joined: "Apr 2025",
-          });
-          await onAuth({ mode: "demo-register", user: newUser });
-          return;
-        } catch (demoError) {
-          setErr(demoError.message || "Something went wrong.");
-          return;
-        }
-      }
       setErr(error.message || "Something went wrong.");
     } finally {
       setLoading(false);
@@ -1612,7 +1595,7 @@ function Dashboard({ user, setPage, unread }) {
             <em className="gold-text">{user?.name?.split(" ")[0]}</em>
           </h1>
           <p style={{ color: "#B6B6C4", fontSize: 15 }}>
-            Here's what's happening in your community today.
+            Here&apos;s what&apos;s happening in your community today.
           </p>
         </div>
       </div>
@@ -1866,7 +1849,7 @@ function Dashboard({ user, setPage, unread }) {
               marginBottom: 6,
             }}
           >
-            "Every day above ground is a good day."
+            &quot;Every day above ground is a good day.&quot;
           </div>
           <div style={{ fontSize: 12, color: "#7A7A8A" }}>
             New Horizon Community · Daily Affirmation
@@ -2122,6 +2105,8 @@ function ConnectPage({ setPage, setChatUser, community, user, backendReady }) {
 }
 
 // ─── MESSAGES / REAL-TIME CHAT ────────────────────────────────────────────────
+const EMPTY_ARRAY = [];
+
 function MessagesPage({
   user,
   chatUser,
@@ -2131,24 +2116,18 @@ function MessagesPage({
   refreshUnread,
 }) {
   const [conversations, setConversations] = useState(DEMO_MESSAGES);
-  const [conversationList, setConversationList] = useState(
-    community.slice(0, 4),
-  );
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendError, setSendError] = useState(null);
   const messagesEnd = useRef(null);
+  const conversationList = useMemo(() => community.slice(0, 8), [community]);
   const activePeer = chatUser || conversationList[0] || community[0];
-  const msgs = conversations[activePeer?.id] || [];
+  const msgs = conversations[activePeer?.id] || EMPTY_ARRAY;
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, activePeer]);
-
-  useEffect(() => {
-    setConversationList(community.slice(0, 8));
-  }, [community]);
 
   useEffect(() => {
     if (!backendReady || !user?.id || !activePeer?.id) return;
@@ -2690,7 +2669,7 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
                 color: T.info,
               }}
             >
-              ℹ By applying, you're authorizing us to share your profile with
+              ℹ By applying, you&apos;re authorizing us to share your profile with
               this employer. Felony history is disclosed per your preferences.
             </div>
             <Btn
@@ -3133,7 +3112,7 @@ function CalculatorPage() {
           Sentence <em style={{ color: T.gold }}>Calculator</em>
         </h1>
         <p style={{ color: T.slate }}>
-          Estimate release dates based on your state's good-time laws. For
+          Estimate release dates based on your state&apos;s good-time laws. For
           informational use only.
         </p>
       </div>
@@ -3528,9 +3507,9 @@ function BlogPage({ posts, user, backendReady }) {
           </p>
           <br />
           <p>
-            Community isn't a luxury — it's infrastructure. The support
+            Community isn&apos;t a luxury — it&apos;s infrastructure. The support
             networks, the job leads passed between members, the late-night
-            messages that say "I've been exactly where you are" — this is what
+            messages that say &quot;I&apos;ve been exactly where you are&quot; — this is what
             New Horizon was built for. Your record is part of your story. It is
             not the whole story.
           </p>
@@ -4328,7 +4307,6 @@ export default function App() {
 
   useEffect(() => {
     if (!BACKEND_READY) {
-      setBooting(false);
       return;
     }
     let mounted = true;
@@ -4394,7 +4372,11 @@ export default function App() {
         const savedIds = new Set(
           (savedJobs || []).map((job) => job?.job?.id).filter(Boolean),
         );
-        setCommunity(COMMUNITY);
+        setCommunity(
+          communityData && communityData.length
+            ? communityData.map(normalizeCommunityMember)
+            : COMMUNITY,
+        );
         setJobs(
           (jobsData || []).map((job) => normalizeJob(job, savedIds)).length
             ? (jobsData || []).map((job) => normalizeJob(job, savedIds))
@@ -4423,12 +4405,6 @@ export default function App() {
       cancelled = true;
     };
   }, [user]);
-
-  useEffect(() => {
-    if (!chatUser && community.length) {
-      setChatUser(community[0]);
-    }
-  }, [chatUser, community]);
 
   const handleAuth = async ({ mode, form, user: demoUser }) => {
     if (mode === "demo-login" || mode === "demo-register") {

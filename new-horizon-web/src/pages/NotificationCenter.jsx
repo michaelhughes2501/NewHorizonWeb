@@ -817,7 +817,7 @@ export default function NotificationCenter() {
                     <div style={{ fontSize: 32, marginBottom: 12 }}>🔔</div>
                     <div style={{ fontWeight: 500 }}>No notifications</div>
                     <div style={{ fontSize: 13, marginTop: 4 }}>
-                      You're all caught up.
+                      You&apos;re all caught up.
                     </div>
                   </div>
                 ) : (
