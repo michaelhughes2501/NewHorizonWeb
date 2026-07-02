@@ -23,22 +23,38 @@ function ProjectRouter() {
   );
 }
 
-const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || "")
+// SHA-256 hashes of admin emails. Storing hashes (not plain text) so the
+// admin list does not leak into the client bundle. This is UX gating only —
+// real authorization still has to be enforced server-side via RLS.
+const ADMIN_EMAIL_HASHES = (import.meta.env.VITE_ADMIN_EMAILS || "")
   .split(",")
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
+
+async function sha256Hex(input) {
+  if (!globalThis.crypto?.subtle) return "";
+  const bytes = new TextEncoder().encode(input);
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 function AdminGuard({ children }) {
   const [ready, setReady] = useState(false);
   const [allowed, setAllowed] = useState(false);
   useEffect(() => {
+    let cancelled = false;
     AuthService.getSession()
-      .then((session) => {
+      .then(async (session) => {
         const email = session?.user?.email?.toLowerCase();
-        setAllowed(Boolean(email) && ADMIN_EMAILS.includes(email));
+        const hash = email ? await sha256Hex(email) : "";
+        if (cancelled) return;
+        setAllowed(Boolean(hash) && ADMIN_EMAIL_HASHES.includes(hash));
         setReady(true);
       })
-      .catch(() => setReady(true));
+      .catch(() => { if (!cancelled) setReady(true); });
+    return () => { cancelled = true; };
   }, []);
   if (!ready) return <LoadingScreen />;
   return allowed ? children : <Navigate to="/" replace />;
