@@ -49,8 +49,6 @@ export function Skeleton({ width = "100%", height = 16, borderRadius = 4 }) {
 
 /** Preset card skeleton: avatar circle + 3 lines of text. */
 export function SkeletonCard() {
-  useEffect(() => { injectShimmerCSS(); }, []);
-
   return (
     <div
       style={{
