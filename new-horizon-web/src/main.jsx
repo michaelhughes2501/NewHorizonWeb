@@ -23,12 +23,21 @@ function ProjectRouter() {
   );
 }
 
+const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || "")
+  .split(",")
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
 function AdminGuard({ children }) {
   const [ready, setReady] = useState(false);
   const [allowed, setAllowed] = useState(false);
   useEffect(() => {
     AuthService.getSession()
-      .then((session) => { setAllowed(!!session); setReady(true); })
+      .then((session) => {
+        const email = session?.user?.email?.toLowerCase();
+        setAllowed(Boolean(email) && ADMIN_EMAILS.includes(email));
+        setReady(true);
+      })
       .catch(() => setReady(true));
   }, []);
   if (!ready) return <LoadingScreen />;
