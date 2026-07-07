@@ -1106,6 +1106,7 @@ function UserManagement() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name or email..."
+            aria-label="Search name or email"
             style={{
               paddingLeft: 34,
               border: `1px solid ${T.mist}`,
@@ -1341,6 +1342,7 @@ function UserManagement() {
               </h3>
               <button
                 onClick={() => setSelected(null)}
+                aria-label="Close dialog"
                 style={{
                   background: T.mist,
                   width: 32,
