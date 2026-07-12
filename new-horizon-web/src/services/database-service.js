@@ -179,6 +179,36 @@ export const ProfileService = {
   },
 }
 
+export const ConnectionService = {
+  async likeProfile(userId, targetId) {
+    const { data, error } = await supabase
+      .from('connections')
+      .insert({ user_a: userId, user_b: targetId })
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async unlikeProfile(userId, targetId) {
+    const { error } = await supabase
+      .from('connections')
+      .delete()
+      .eq('user_a', userId)
+      .eq('user_b', targetId)
+    if (error) throw error
+  },
+
+  async getConnections(userId) {
+    const { data, error } = await supabase
+      .from('connections')
+      .select('*')
+      .or(`user_a.eq.${userId},user_b.eq.${userId}`)
+    if (error) throw error
+    return data
+  },
+}
+
 export const JobService = {
   async getJobs(filters = {}) {
     return JobService.listJobs(filters)
