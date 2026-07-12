@@ -32,7 +32,16 @@ const ADMIN_EMAIL_HASHES = (import.meta.env.VITE_ADMIN_EMAILS || "")
   .filter(Boolean);
 
 async function sha256Hex(input) {
-  if (!globalThis.crypto?.subtle) return "";
+  if (!globalThis.crypto?.subtle) {
+    // Web Crypto is only available in secure contexts (HTTPS or localhost).
+    // Fail closed and warn so an operator hitting this in production knows why
+    // /admin is denying access, instead of silently redirecting.
+    console.warn(
+      "[AdminGuard] crypto.subtle unavailable — /admin denied. " +
+        "Serve the app over HTTPS (or from localhost) for admin access.",
+    );
+    return "";
+  }
   const bytes = new TextEncoder().encode(input);
   const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest))
