@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import {
   AuthService,
   BlogService,
+  ConnectionService,
   JobService,
   MessageService,
   NotificationService,
@@ -870,6 +871,7 @@ const Toast = ({ msg, type = "success", onClose }) => {
       <span style={{ flex: 1 }}>{msg}</span>
       <button
         onClick={onClose}
+        aria-label="Dismiss notification"
         style={{
           background: "none",
           color: fg,
@@ -927,6 +929,7 @@ const Modal = ({ children, onClose, title }) => (
         </h3>
         <button
           onClick={onClose}
+          aria-label="Close dialog"
           style={{
             background: T.mist,
             border: "none",
@@ -1883,14 +1886,47 @@ function ConnectPage({ setPage, setChatUser, community, user, backendReady }) {
       (filter.interest === "All" || u.interests.includes(filter.interest)),
   );
 
-  const like = (u) => {
+  useEffect(() => {
+    if (!backendReady || !user?.id) return;
+    let cancelled = false;
+    ConnectionService.getConnections(user.id)
+      .then((rows) => {
+        if (cancelled) return;
+        const likedIds = (rows || [])
+          .filter((r) => r.user_a === user.id)
+          .map((r) => r.user_b);
+        setLiked(new Set(likedIds));
+      })
+      .catch(() => {
+        // Keep local-only liked state if the connections table isn't reachable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [backendReady, user?.id]);
+
+  const like = async (u) => {
+    const wasLiked = liked.has(u.id);
     setLiked((p) => {
       const n = new Set(p);
-      n.has(u.id) ? n.delete(u.id) : n.add(u.id);
+      wasLiked ? n.delete(u.id) : n.add(u.id);
       return n;
     });
-    if (!liked.has(u.id))
-      setToast(`You liked ${u.name.split(" ")[0]}'s profile!`);
+    if (!wasLiked) setToast(`You liked ${u.name.split(" ")[0]}'s profile!`);
+    if (!backendReady || !user?.id) return;
+    try {
+      if (wasLiked) {
+        await ConnectionService.unlikeProfile(user.id, u.id);
+      } else {
+        await ConnectionService.likeProfile(user.id, u.id);
+      }
+    } catch {
+      setLiked((p) => {
+        const n = new Set(p);
+        wasLiked ? n.add(u.id) : n.delete(u.id);
+        return n;
+      });
+    }
   };
 
   return (
@@ -2248,6 +2284,7 @@ function MessagesPage({
           <div style={{ marginTop: 10, position: "relative" }}>
             <input
               placeholder="Search conversations..."
+              aria-label="Search conversations"
               style={{ paddingLeft: 32, fontSize: 13 }}
             />
             <span
@@ -2469,7 +2506,7 @@ function MessagesPage({
         {/* Input */}
         <div style={{ background: "white", borderTop: `1px solid ${T.mist}` }}>
           {sendError && (
-            <div style={{ color: "#c0392b", fontSize: 12, padding: "4px 20px 0" }}>
+            <div style={{ color: T.rose, fontSize: 12, padding: "4px 20px 0" }}>
               {sendError}
             </div>
           )}
@@ -2718,6 +2755,7 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
           </span>
           <input
             placeholder="Search jobs or companies..."
+            aria-label="Search jobs or companies"
             style={{ paddingLeft: 36 }}
             value={filters.search}
             onChange={(e) => setF("search", e.target.value)}
@@ -4154,7 +4192,17 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
                 <div style={{ fontSize: 12, color: T.slate }}>{desc}</div>
               </div>
               <div
+                role="switch"
+                aria-checked={form[key]}
+                aria-label={label}
+                tabIndex={0}
                 onClick={() => set(key, !form[key])}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    set(key, !form[key]);
+                  }
+                }}
                 style={{
                   width: 44,
                   height: 24,

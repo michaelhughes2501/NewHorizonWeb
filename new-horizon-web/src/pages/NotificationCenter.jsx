@@ -200,6 +200,7 @@ function NotificationBell({ notifs, onOpen }) {
   return (
     <button
       onClick={onOpen}
+      aria-label={unread > 0 ? `Notifications (${unread} unread)` : "Notifications"}
       style={{
         position: "relative",
         background: "none",
@@ -531,6 +532,7 @@ export default function NotificationCenter() {
           </div>
           <button
             onClick={() => setIncoming(null)}
+            aria-label="Dismiss notification"
             style={{
               background: "none",
               color: T.slate,
@@ -832,6 +834,7 @@ export default function NotificationCenter() {
                       <NotifItem n={n} onRead={markRead} />
                       <button
                         onClick={() => deleteN(n.id)}
+                        aria-label={`Delete notification: ${n.title}`}
                         style={{
                           position: "absolute",
                           right: 14,
@@ -1039,9 +1042,19 @@ export default function NotificationCenter() {
                       </div>
                     </div>
                     <div
+                      role="switch"
+                      aria-checked={prefs[key]}
+                      aria-label={label}
+                      tabIndex={0}
                       onClick={() =>
                         setPrefs((p) => ({ ...p, [key]: !p[key] }))
                       }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setPrefs((p) => ({ ...p, [key]: !p[key] }));
+                        }
+                      }}
                       style={{
                         width: 44,
                         height: 24,
