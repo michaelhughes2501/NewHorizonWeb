@@ -56,13 +56,16 @@ function AdminGuard({ children }) {
     let cancelled = false;
     AuthService.getSession()
       .then(async (session) => {
-        const email = session?.user?.email?.toLowerCase();
+        const email = session?.user?.email?.trim().toLowerCase();
         const hash = email ? await sha256Hex(email) : "";
         if (cancelled) return;
         setAllowed(Boolean(hash) && ADMIN_EMAIL_HASHES.includes(hash));
         setReady(true);
       })
-      .catch(() => { if (!cancelled) setReady(true); });
+      .catch((err) => {
+        console.error("[AdminGuard] Failed to fetch session:", err);
+        if (!cancelled) setReady(true);
+      });
     return () => { cancelled = true; };
   }, []);
   if (!ready) return <LoadingScreen />;
