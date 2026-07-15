@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
   AuthService,
   BlogService,
@@ -73,6 +74,12 @@ a{text-decoration:none;color:inherit}
 .nav-item:hover{background:${T.gold}0f}
 .nav-item.active::before{transform:translateY(-50%) scaleY(1)}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+img{max-width:100%;height:auto}
+@media (max-width:860px){
+  .nh-sidenav{width:72px!important}
+  .nh-sidenav .nh-nav-label,.nh-sidenav .nh-brand-label,.nh-sidenav .nh-user-meta{display:none!important}
+  .nh-sidenav .nav-item{justify-content:center!important;padding:12px 0!important}
+}
 `;
 if (!document.getElementById("nh-styles")) {
   const s = document.createElement("style");
@@ -641,14 +648,18 @@ function normalizeProfile(profile = {}) {
 }
 
 function normalizeCommunityMember(profile = {}) {
+  // Intentionally does not read/expose offense/offense_type here — that field
+  // is criminal-history data and must never be shown for other members (only
+  // on a user's own profile). See CLAUDE.md: "Treat criminal-history fields
+  // as private — store them but never surface them in public API responses."
+  const showState = profile.showState ?? profile.show_state ?? true;
   return {
     id: profile.id,
     name: profile.name || "Community Member",
     avatar: profile.avatar || initialsFromName(profile.name),
     age: profile.age || "",
-    state: profile.state || "",
+    state: showState ? profile.state || "" : "",
     bio: profile.bio || "Building a new chapter with the community.",
-    offense: profile.offense || profile.offense_type || "Prefer not to say",
     releaseYear: profile.releaseYear || profile.release_year || "",
     interests: profile.interests || [],
     online: Boolean(profile.online),
@@ -1367,6 +1378,7 @@ const NAV = [
 function SideNav({ page, setPage, user, notifs }) {
   return (
     <aside
+      className="nh-sidenav"
       style={{
         width: 220,
         flexShrink: 0,
@@ -1377,6 +1389,7 @@ function SideNav({ page, setPage, user, notifs }) {
         height: "100vh",
         position: "sticky",
         top: 0,
+        transition: "width .2s ease",
       }}
     >
       <div
@@ -1402,14 +1415,57 @@ function SideNav({ page, setPage, user, notifs }) {
             ✦
           </div>
           <span
+            className="nh-brand-label"
             style={{
               fontFamily: "'Cormorant Garamond',serif",
               fontSize: 18,
               fontWeight: 600,
+              flex: 1,
             }}
           >
             New Horizon
           </span>
+          <Link
+            to="/notifications"
+            aria-label={notifs > 0 ? `Notifications, ${notifs} unread` : "Notifications"}
+            style={{
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 30,
+              height: 30,
+              borderRadius: 8,
+              color: T.slate,
+              textDecoration: "none",
+              fontSize: 15,
+              transition: "background .15s, color .15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = T.ivory;
+              e.currentTarget.style.color = T.gold;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = T.slate;
+            }}
+          >
+            🔔
+            {notifs > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: 2,
+                  right: 2,
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: T.rose,
+                  border: "1.5px solid white",
+                }}
+              />
+            )}
+          </Link>
         </div>
       </div>
 
@@ -1439,7 +1495,7 @@ function SideNav({ page, setPage, user, notifs }) {
             <span style={{ fontSize: 15, width: 18, textAlign: "center" }}>
               {n.icon}
             </span>
-            {n.label}
+            <span className="nh-nav-label">{n.label}</span>
             {n.id === "Messages" && notifs > 0 && (
               <span
                 style={{
@@ -1462,7 +1518,7 @@ function SideNav({ page, setPage, user, notifs }) {
       <div style={{ padding: "12px 14px", borderTop: `1px solid ${T.mist}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Avatar initials={user?.avatar || "?"} size={32} />
-          <div style={{ overflow: "hidden" }}>
+          <div className="nh-user-meta" style={{ overflow: "hidden" }}>
             <div
               style={{
                 fontSize: 13,
@@ -2156,6 +2212,7 @@ function MessagesPage({
   const [typing, setTyping] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendError, setSendError] = useState(null);
+  const [showPeerProfile, setShowPeerProfile] = useState(false);
   const messagesEnd = useRef(null);
   const conversationList = useMemo(() => community.slice(0, 8), [community]);
   const activePeer = chatUser || conversationList[0] || community[0];
@@ -2394,6 +2451,8 @@ function MessagesPage({
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
             <button
+              onClick={() => setShowPeerProfile(true)}
+              disabled={!activePeer}
               style={{
                 background: T.ivory,
                 border: `1px solid ${T.mist}`,
@@ -2401,12 +2460,55 @@ function MessagesPage({
                 borderRadius: 8,
                 fontSize: 13,
                 color: T.slate,
+                cursor: activePeer ? "pointer" : "default",
+                opacity: activePeer ? 1 : 0.5,
+                transition: "border-color .15s, color .15s",
+              }}
+              onMouseEnter={(e) => {
+                if (!activePeer) return;
+                e.currentTarget.style.borderColor = T.gold;
+                e.currentTarget.style.color = T.charcoal;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = T.mist;
+                e.currentTarget.style.color = T.slate;
               }}
             >
               View Profile
             </button>
           </div>
         </div>
+
+        {showPeerProfile && activePeer && (
+          <Modal title="Member Profile" onClose={() => setShowPeerProfile(false)}>
+            <div style={{ display: "flex", gap: 14, marginBottom: 18 }}>
+              <Avatar initials={activePeer.avatar} size={56} online={activePeer.online} />
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 17 }}>{activePeer.name}</div>
+                <div style={{ color: T.slate, fontSize: 13 }}>
+                  {[activePeer.age && `${activePeer.age} yrs`, activePeer.state]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+                <div style={{ color: activePeer.online ? T.success : T.slate, fontSize: 12, marginTop: 2 }}>
+                  {activePeer.online ? "● Online now" : `Last seen ${activePeer.lastSeen}`}
+                </div>
+              </div>
+            </div>
+            {activePeer.bio && (
+              <p style={{ color: T.slate, fontSize: 14, lineHeight: 1.6, marginBottom: 14 }}>
+                {activePeer.bio}
+              </p>
+            )}
+            {activePeer.interests?.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {activePeer.interests.map((t) => (
+                  <Badge key={t}>{t}</Badge>
+                ))}
+              </div>
+            )}
+          </Modal>
+        )}
 
         {/* Messages */}
         <div
@@ -3434,6 +3536,8 @@ function CalculatorPage() {
 function BlogPage({ posts, user, backendReady }) {
   const [open, setOpen] = useState(null);
   const [liked, setLiked] = useState(new Set());
+  const [comments, setComments] = useState({});
+  const [commentDraft, setCommentDraft] = useState("");
   const categories = [
     "All",
     "Story",
@@ -3466,6 +3570,24 @@ function BlogPage({ posts, user, backendReady }) {
         // Keep UI responsive even if the backend call fails.
       }
     }
+  };
+
+  const addComment = (postId) => {
+    const text = commentDraft.trim();
+    if (!text) return;
+    setComments((p) => ({
+      ...p,
+      [postId]: [
+        ...(p[postId] || []),
+        {
+          author: user?.name || "You",
+          avatar: user?.avatar || "?",
+          text,
+          time: "Now",
+        },
+      ],
+    }));
+    setCommentDraft("");
   };
 
   if (post)
@@ -3529,7 +3651,7 @@ function BlogPage({ posts, user, backendReady }) {
               ♥ {post.likes + (liked.has(post.id) ? 1 : 0)}
             </span>
             <span style={{ fontSize: 13, color: T.slate }}>
-              💬 {post.comments}
+              💬 {post.comments + (comments[post.id]?.length || 0)}
             </span>
           </div>
         </div>
@@ -3573,6 +3695,12 @@ function BlogPage({ posts, user, backendReady }) {
             {liked.has(post.id) ? "♥ Liked" : "♡ Like this story"}
           </button>
           <button
+            onClick={() =>
+              document
+                .getElementById("comment-composer")
+                ?.querySelector("textarea")
+                ?.focus()
+            }
             style={{
               padding: "10px 20px",
               borderRadius: 10,
@@ -3581,10 +3709,84 @@ function BlogPage({ posts, user, backendReady }) {
               color: T.slate,
               fontSize: 14,
               cursor: "pointer",
+              transition: "border-color .15s, color .15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = T.gold;
+              e.currentTarget.style.color = T.charcoal;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = T.mist;
+              e.currentTarget.style.color = T.slate;
             }}
           >
             💬 Comment
           </button>
+        </div>
+
+        <div
+          id="comment-composer"
+          style={{
+            marginTop: 28,
+            paddingTop: 24,
+            borderTop: `1px solid ${T.mist}`,
+          }}
+        >
+          <h3
+            style={{
+              fontFamily: "'Cormorant Garamond',serif",
+              fontSize: 20,
+              fontWeight: 600,
+              marginBottom: 14,
+            }}
+          >
+            Comments ({post.comments + (comments[post.id]?.length || 0)})
+          </h3>
+          <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+            <Avatar initials={user?.avatar || "?"} size={36} />
+            <div style={{ flex: 1 }}>
+              <textarea
+                value={commentDraft}
+                onChange={(e) => setCommentDraft(e.target.value)}
+                placeholder="Share your thoughts..."
+                rows={2}
+                style={{
+                  width: "100%",
+                  border: `1px solid ${T.mist}`,
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                  fontSize: 14,
+                  fontFamily: "'DM Sans',sans-serif",
+                  resize: "vertical",
+                }}
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                <Btn size="sm" onClick={() => addComment(post.id)}>
+                  Post Comment
+                </Btn>
+              </div>
+            </div>
+          </div>
+          {(comments[post.id] || []).length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {(comments[post.id] || []).map((c, i) => (
+                <div key={i} style={{ display: "flex", gap: 10 }}>
+                  <Avatar initials={c.avatar} size={32} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>
+                      {c.author}{" "}
+                      <span style={{ fontWeight: 400, color: T.slate, fontSize: 12 }}>
+                        · {c.time}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 14, color: T.slate, lineHeight: 1.5 }}>
+                      {c.text}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
