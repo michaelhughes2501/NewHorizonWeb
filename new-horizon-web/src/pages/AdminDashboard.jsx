@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 /**
@@ -1070,11 +1070,15 @@ function UserManagement() {
     );
 
   const [toast, setToast] = useState(null);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
   const inviteUser = () => {
     const email = window.prompt("Enter the email address to invite:");
     if (!email) return;
     setToast(`Invitation sent to ${email}`);
-    setTimeout(() => setToast(null), 3000);
   };
 
   return (
@@ -1514,15 +1518,18 @@ function UserManagement() {
 function JobApprovals() {
   const [jobs, setJobs] = useState(PENDING_JOBS);
   const [toast, setToast] = useState(null);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
   const approve = (id) => {
     setJobs((p) => p.filter((j) => j.id !== id));
     setToast("Job listing approved and published!");
-    setTimeout(() => setToast(null), 3000);
   };
   const reject = (id) => {
     setJobs((p) => p.filter((j) => j.id !== id));
     setToast("Job listing rejected.");
-    setTimeout(() => setToast(null), 3000);
   };
 
   return (

@@ -161,7 +161,7 @@ export const ProfileService = {
   async getCommunity({ state: stateFilter, limit = 30 } = {}) {
     let query = supabase
       .from('profiles')
-      .select('id, name, avatar, avatar_url, age, state, bio, release_year, interests, is_verified, last_seen, show_state')
+      .select('id, name, avatar, avatar_url, age, state, bio, release_year, interests, is_verified, last_seen, show_state, online')
       .eq('public_profile', true)
       .eq('is_banned', false)
       .limit(limit)

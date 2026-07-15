@@ -1375,7 +1375,7 @@ const NAV = [
   { id: "Profile", icon: "◯", label: "Profile" },
 ];
 
-function SideNav({ page, setPage, user, notifs }) {
+function SideNav({ page, setPage, user, notifsCount, messagesCount }) {
   return (
     <aside
       className="nh-sidenav"
@@ -1427,7 +1427,7 @@ function SideNav({ page, setPage, user, notifs }) {
           </span>
           <Link
             to="/notifications"
-            aria-label={notifs > 0 ? `Notifications, ${notifs} unread` : "Notifications"}
+            aria-label={notifsCount > 0 ? `Notifications, ${notifsCount} unread` : "Notifications"}
             style={{
               position: "relative",
               display: "inline-flex",
@@ -1451,7 +1451,7 @@ function SideNav({ page, setPage, user, notifs }) {
             }}
           >
             🔔
-            {notifs > 0 && (
+            {notifsCount > 0 && (
               <span
                 style={{
                   position: "absolute",
@@ -1496,7 +1496,7 @@ function SideNav({ page, setPage, user, notifs }) {
               {n.icon}
             </span>
             <span className="nh-nav-label">{n.label}</span>
-            {n.id === "Messages" && notifs > 0 && (
+            {n.id === "Messages" && messagesCount > 0 && (
               <span
                 style={{
                   marginLeft: "auto",
@@ -1508,7 +1508,7 @@ function SideNav({ page, setPage, user, notifs }) {
                   borderRadius: 10,
                 }}
               >
-                {notifs}
+                {messagesCount}
               </span>
             )}
           </button>
@@ -3538,6 +3538,7 @@ function BlogPage({ posts, user, backendReady }) {
   const [liked, setLiked] = useState(new Set());
   const [comments, setComments] = useState({});
   const [commentDraft, setCommentDraft] = useState("");
+  const commentInputRef = useRef(null);
   const categories = [
     "All",
     "Story",
@@ -3695,12 +3696,7 @@ function BlogPage({ posts, user, backendReady }) {
             {liked.has(post.id) ? "♥ Liked" : "♡ Like this story"}
           </button>
           <button
-            onClick={() =>
-              document
-                .getElementById("comment-composer")
-                ?.querySelector("textarea")
-                ?.focus()
-            }
+            onClick={() => commentInputRef.current?.focus()}
             style={{
               padding: "10px 20px",
               borderRadius: 10,
@@ -3746,6 +3742,7 @@ function BlogPage({ posts, user, backendReady }) {
             <Avatar initials={user?.avatar || "?"} size={36} />
             <div style={{ flex: 1 }}>
               <textarea
+                ref={commentInputRef}
                 value={commentDraft}
                 onChange={(e) => setCommentDraft(e.target.value)}
                 placeholder="Share your thoughts..."
@@ -4539,19 +4536,20 @@ export default function App() {
   const [community, setCommunity] = useState(COMMUNITY);
   const [jobs, setJobs] = useState(JOBS);
   const [posts, setPosts] = useState(BLOG_POSTS);
-  const [unread, setUnread] = useState(3);
+  const [unreadMessages, setUnreadMessages] = useState(3);
+  const [unreadNotifications, setUnreadNotifications] = useState(3);
   const [booting, setBooting] = useState(BACKEND_READY);
 
   const refreshUnread = async (userId = user?.id) => {
     if (!BACKEND_READY || !userId) {
-      setUnread(3);
+      setUnreadMessages(3);
       return;
     }
     try {
       const count = await MessageService.getUnreadCount(userId);
-      setUnread(count || 0);
+      setUnreadMessages(count || 0);
     } catch {
-      setUnread(3);
+      setUnreadMessages(3);
     }
   };
 
@@ -4606,7 +4604,7 @@ export default function App() {
         setCommunity(COMMUNITY);
         setJobs(JOBS);
         setPosts(BLOG_POSTS);
-        setUnread(3);
+        setUnreadNotifications(3);
         return;
       }
       try {
@@ -4637,16 +4635,16 @@ export default function App() {
             ? (postData || []).map(normalizeBlogPost)
             : BLOG_POSTS,
         );
-        const unreadNotifications = (notifications || []).filter(
+        const unreadNotifCount = (notifications || []).filter(
           (n) => !n.read,
         ).length;
-        setUnread(unreadNotifications || 0);
+        setUnreadNotifications(unreadNotifCount || 0);
       } catch {
         if (!cancelled) {
           setCommunity(COMMUNITY);
           setJobs(JOBS);
           setPosts(BLOG_POSTS);
-          setUnread(3);
+          setUnreadNotifications(3);
         }
       }
     };
@@ -4711,7 +4709,7 @@ export default function App() {
     jobs,
     setJobs,
     posts,
-    unread,
+    unread: unreadMessages,
     backendReady: BACKEND_READY,
     refreshUnread,
     onLogout: handleLogout,
@@ -4729,7 +4727,13 @@ export default function App() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      <SideNav page={page} setPage={setPage} user={user} notifs={unread} />
+      <SideNav
+        page={page}
+        setPage={setPage}
+        user={user}
+        notifsCount={unreadNotifications}
+        messagesCount={unreadMessages}
+      />
       <main style={{ flex: 1, overflowY: "auto", position: "relative" }}>
         {pages[page] || <Dashboard {...pageProps} />}
       </main>
