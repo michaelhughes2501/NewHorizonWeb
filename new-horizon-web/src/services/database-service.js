@@ -6,10 +6,18 @@ const PLACEHOLDERS = new Set([
   'https://YOUR_PROJECT.supabase.co',
   'your-anon-key',
   'YOUR_ANON_KEY',
+  'sb_publishable_xxxxxxxxxxxxxxxxxxxx',
 ])
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Accept either the classic anon key or the newer publishable key — App.jsx
+// and NotificationCenter.jsx both treat either one as "backend configured",
+// so the client here must be created with whichever one is actually set or
+// those pages will believe the backend is ready while every call silently
+// falls back to the no-op stub client below.
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
 export const SUPABASE_CONFIGURED =
   Boolean(supabaseUrl) &&
@@ -146,8 +154,17 @@ export const ProfileService = {
     return ProfileService.getProfile(data.user.id)
   },
 
+  // Public-facing member browse (Connect page, community list). Only ever
+  // select fields that are safe to show other members — never offense_type,
+  // email, ban_reason, or other private/criminal-history columns. See
+  // CLAUDE.md: "Treat criminal-history fields as private."
   async getCommunity({ state: stateFilter, limit = 30 } = {}) {
-    let query = supabase.from('profiles').select('*').limit(limit)
+    let query = supabase
+      .from('profiles')
+      .select('id, name, avatar, avatar_url, age, state, bio, release_year, interests, is_verified, last_seen, show_state, online')
+      .eq('public_profile', true)
+      .eq('is_banned', false)
+      .limit(limit)
     if (stateFilter && stateFilter !== 'All') query = query.eq('state', stateFilter)
     const { data, error } = await query
     if (error) throw error
