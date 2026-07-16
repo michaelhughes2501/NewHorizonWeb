@@ -27,9 +27,12 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: new-horizon-web/package-lock.json
       - name: Install agent deps
         run: pip install pyyaml
       - name: Install project deps (so webpack inspector can require plugins)
+        working-directory: new-horizon-web
         run: |
           if [ -f package-lock.json ]; then npm ci --ignore-scripts; \
           elif [ -f package.json ]; then npm install --ignore-scripts; \
@@ -99,9 +102,11 @@ jobs:
         with:
           node-version: "20"
           cache: npm
+          cache-dependency-path: new-horizon-web/package-lock.json
       - name: Install agent deps
         run: pip install pyyaml
       - name: Install project deps
+        working-directory: new-horizon-web
         run: |
           if [ -f package-lock.json ]; then npm ci; \
           elif [ -f package.json ]; then npm install; fi
