@@ -6,6 +6,8 @@ import { AuthService } from "./services/database-service.js";
 
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"));
 const NotificationCenter = lazy(() => import("./pages/NotificationCenter.jsx"));
+const Integrations = lazy(() => import("./pages/Integrations.jsx"));
+const IntegrationsCallback = lazy(() => import("./pages/IntegrationsCallback.jsx"));
 
 function ProjectRouter() {
   return (
@@ -15,6 +17,8 @@ function ProjectRouter() {
           <Route path="/" element={<App />} />
           <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
           <Route path="/notifications" element={<NotificationCenter />} />
+          <Route path="/integrations" element={<Integrations />} />
+          <Route path="/integrations/callback" element={<IntegrationsCallback />} />
           <Route path="/app" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
