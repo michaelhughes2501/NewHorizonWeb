@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 /**
  * NEW HORIZON — Admin Dashboard
@@ -1068,8 +1069,40 @@ function UserManagement() {
       p.map((u) => (u.id === id ? { ...u, reports: 0, status: "active" } : u)),
     );
 
+  const [toast, setToast] = useState(null);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+  const inviteUser = () => {
+    const email = window.prompt("Enter the email address to invite:");
+    if (!email) return;
+    setToast(`Invitation sent to ${email}`);
+  };
+
   return (
     <div>
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            background: "white",
+            border: `1px solid ${T.gold}40`,
+            color: T.charcoal,
+            padding: "12px 18px",
+            borderRadius: 10,
+            boxShadow: "0 8px 24px rgba(0,0,0,.12)",
+            fontSize: 14,
+            zIndex: 9999,
+            animation: "fadeIn .3s ease",
+          }}
+        >
+          {toast}
+        </div>
+      )}
       <div style={{ marginBottom: 24 }}>
         <h1
           style={{
@@ -1137,6 +1170,7 @@ function UserManagement() {
           </button>
         ))}
         <button
+          onClick={inviteUser}
           style={{
             marginLeft: "auto",
             padding: "8px 18px",
@@ -1145,7 +1179,10 @@ function UserManagement() {
             borderRadius: 8,
             fontSize: 13,
             fontWeight: 500,
+            transition: "opacity .15s, transform .15s",
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
         >
           + Invite User
         </button>
@@ -1481,15 +1518,18 @@ function UserManagement() {
 function JobApprovals() {
   const [jobs, setJobs] = useState(PENDING_JOBS);
   const [toast, setToast] = useState(null);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
   const approve = (id) => {
     setJobs((p) => p.filter((j) => j.id !== id));
     setToast("Job listing approved and published!");
-    setTimeout(() => setToast(null), 3000);
   };
   const reject = (id) => {
     setJobs((p) => p.filter((j) => j.id !== id));
     setToast("Job listing rejected.");
-    setTimeout(() => setToast(null), 3000);
   };
 
   return (
@@ -2389,10 +2429,27 @@ export default function AdminDashboard() {
         >
           Notification <em style={{ color: T.gold }}>Controls</em>
         </h1>
-        <p style={{ color: T.slate }}>
-          Use the Notification System file to manage templates and push
-          delivery. This panel connects to that service.
+        <p style={{ color: T.slate, marginBottom: 20 }}>
+          Manage push/email templates and quiet-hours delivery in the
+          Notification Center.
         </p>
+        <Link
+          to="/notifications"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "10px 22px",
+            borderRadius: 8,
+            background: `linear-gradient(135deg,${T.gold},${T.goldL})`,
+            color: "white",
+            fontSize: 14,
+            fontWeight: 500,
+            textDecoration: "none",
+          }}
+        >
+          Open Notification Center →
+        </Link>
       </div>
     ),
     analytics: <Analytics />,
