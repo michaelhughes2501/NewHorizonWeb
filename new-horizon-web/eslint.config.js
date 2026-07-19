@@ -33,4 +33,14 @@ export default [
       "no-undef": "error",
     },
   },
+  {
+    files: ["server.js", "vite.config.js"],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
 ];

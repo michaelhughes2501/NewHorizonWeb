@@ -200,6 +200,7 @@ function NotificationBell({ notifs, onOpen }) {
   return (
     <button
       onClick={onOpen}
+      aria-label={unread > 0 ? `Notifications (${unread} unread)` : "Notifications"}
       style={{
         position: "relative",
         background: "none",
@@ -349,6 +350,7 @@ export default function NotificationCenter() {
   const [tab, setTab] = useState("center");
   const [incoming, setIncoming] = useState(null);
   const [toast, setToast] = useState("");
+  const [templates, setTemplates] = useState(EMAIL_TEMPLATES);
   const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState(
     BACKEND_READY ? "Connecting..." : "Demo mode",
@@ -469,6 +471,23 @@ export default function NotificationCenter() {
     }
   };
 
+  const previewTemplate = (name) => {
+    const t = templates.find((tpl) => tpl.name === name);
+    if (!t) return;
+    showToast(`Preview — "${t.subject}" (${t.trigger})`);
+  };
+
+  const editTemplate = (name) => {
+    const t = templates.find((tpl) => tpl.name === name);
+    if (!t) return;
+    const nextSubject = window.prompt(`Edit subject line for "${name}":`, t.subject);
+    if (nextSubject == null || nextSubject === t.subject) return;
+    setTemplates((prev) =>
+      prev.map((tpl) => (tpl.name === name ? { ...tpl, subject: nextSubject } : tpl)),
+    );
+    showToast(`Updated subject for "${name}".`);
+  };
+
   const filtered =
     filter === "all"
       ? notifs
@@ -531,6 +550,7 @@ export default function NotificationCenter() {
           </div>
           <button
             onClick={() => setIncoming(null)}
+            aria-label="Dismiss notification"
             style={{
               background: "none",
               color: T.slate,
@@ -832,6 +852,7 @@ export default function NotificationCenter() {
                       <NotifItem n={n} onRead={markRead} />
                       <button
                         onClick={() => deleteN(n.id)}
+                        aria-label={`Delete notification: ${n.title}`}
                         style={{
                           position: "absolute",
                           right: 14,
@@ -1039,9 +1060,19 @@ export default function NotificationCenter() {
                       </div>
                     </div>
                     <div
+                      role="switch"
+                      aria-checked={prefs[key]}
+                      aria-label={label}
+                      tabIndex={0}
                       onClick={() =>
                         setPrefs((p) => ({ ...p, [key]: !p[key] }))
                       }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setPrefs((p) => ({ ...p, [key]: !p[key] }));
+                        }
+                      }}
                       style={{
                         width: 44,
                         height: 24,
@@ -1145,7 +1176,7 @@ export default function NotificationCenter() {
 
         {tab === "templates" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {EMAIL_TEMPLATES.map((t, i) => (
+            {templates.map((t, i) => (
               <div
                 key={t.name}
                 style={{
@@ -1198,6 +1229,7 @@ export default function NotificationCenter() {
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button
+                    onClick={() => previewTemplate(t.name)}
                     style={{
                       padding: "8px 16px",
                       borderRadius: 8,
@@ -1205,11 +1237,21 @@ export default function NotificationCenter() {
                       background: "white",
                       color: T.slate,
                       fontSize: 13,
+                      transition: "border-color .15s, color .15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = T.gold;
+                      e.currentTarget.style.color = T.charcoal;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = T.mist;
+                      e.currentTarget.style.color = T.slate;
                     }}
                   >
                     Preview
                   </button>
                   <button
+                    onClick={() => editTemplate(t.name)}
                     style={{
                       padding: "8px 16px",
                       borderRadius: 8,
@@ -1217,7 +1259,10 @@ export default function NotificationCenter() {
                       color: "white",
                       fontSize: 13,
                       fontWeight: 500,
+                      transition: "opacity .15s",
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                   >
                     Edit
                   </button>
