@@ -219,8 +219,10 @@ ALTER TABLE jobs                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_applications   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE blog_posts         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE blog_likes         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saved_jobs         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log          ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: users can read public profiles, edit only their own
 CREATE POLICY "public profiles viewable" ON profiles FOR SELECT USING (public_profile = TRUE AND is_banned = FALSE);
@@ -246,6 +248,17 @@ CREATE POLICY "read approved jobs" ON jobs FOR SELECT USING (is_active = TRUE AN
 
 -- Blog: anyone can read published approved posts
 CREATE POLICY "read published posts" ON blog_posts FOR SELECT USING (is_published = TRUE AND is_approved = TRUE);
+
+-- Blog likes: anyone authenticated can read; users manage their own
+CREATE POLICY "read blog likes" ON blog_likes FOR SELECT TO authenticated USING (TRUE);
+CREATE POLICY "own blog likes" ON blog_likes FOR ALL USING (
+  user_id = (SELECT id FROM profiles WHERE auth_id = auth.uid())
+);
+
+-- Saved jobs: own only
+CREATE POLICY "own saved jobs" ON saved_jobs FOR ALL USING (
+  user_id = (SELECT id FROM profiles WHERE auth_id = auth.uid())
+);
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- FUNCTIONS & TRIGGERS
@@ -302,6 +315,14 @@ BEGIN UPDATE jobs SET applications = applications + 1 WHERE id = NEW.job_id; RET
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER job_app_count AFTER INSERT ON job_applications FOR EACH ROW EXECUTE FUNCTION increment_job_apps();
+
+-- Increment blog post likes counter. Called from BlogService.likePost via RPC.
+CREATE OR REPLACE FUNCTION increment_post_likes(post_id UUID)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE blog_posts SET likes = likes + 1 WHERE id = post_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- SEED DATA

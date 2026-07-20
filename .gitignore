@@ -7,3 +7,7 @@ dist/
 .DS_Store
 .vscode/*.local
 .idea/
+
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md

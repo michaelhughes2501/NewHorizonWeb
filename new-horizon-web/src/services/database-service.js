@@ -1,119 +1,180 @@
-/**
- * NEW HORIZON — Database Integration Service Layer
- * Supabase + Real-time Subscriptions + Push Notifications
- *
- * Install: npm install @supabase/supabase-js
- * For React Native add: expo install expo-notifications expo-device
- */
+import { createClient } from '@supabase/supabase-js'
 
-import { createClient } from '@supabase/supabase-js';
+const PLACEHOLDERS = new Set([
+  '',
+  'https://your-project.supabase.co',
+  'https://YOUR_PROJECT.supabase.co',
+  'your-anon-key',
+  'YOUR_ANON_KEY',
+  'sb_publishable_xxxxxxxxxxxxxxxxxxxx',
+])
 
-// ─── SUPABASE CLIENT ──────────────────────────────────────────────────────────
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://YOUR_PROJECT.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
-  || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-  || 'YOUR_ANON_KEY';
-const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+// Accept either the classic anon key or the newer publishable key — App.jsx
+// and NotificationCenter.jsx both treat either one as "backend configured",
+// so the client here must be created with whichever one is actually set or
+// those pages will believe the backend is ready while every call silently
+// falls back to the no-op stub client below.
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
-// Accept either the auth user id or the profile row id while the app is still
-// transitioning toward auth_id-based profile access.
-const filterProfileByUser = (query, userId) => query.or(`auth_id.eq.${userId},id.eq.${userId}`);
+export const SUPABASE_CONFIGURED =
+  Boolean(supabaseUrl) &&
+  Boolean(supabaseAnonKey) &&
+  !PLACEHOLDERS.has(supabaseUrl) &&
+  !PLACEHOLDERS.has(supabaseAnonKey)
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { autoRefreshToken: true, persistSession: true },
-  realtime: { params: { eventsPerSecond: 10 } },
-});
+// When Supabase is not configured (e.g. local preview / demo with no secrets),
+// expose a no-op client so importing this module never throws. The app falls
+// back to its built-in demo/mock data via the BACKEND_READY guard in App.jsx.
+const createStubClient = () => {
+  const notReady = () =>
+    Promise.reject(new Error('Supabase is not configured (preview/demo mode).'))
+  const queryBuilder = () => {
+    const builder = {
+      select: () => builder,
+      insert: () => builder,
+      update: () => builder,
+      delete: () => builder,
+      eq: () => builder,
+      or: () => builder,
+      ilike: () => builder,
+      order: () => builder,
+      limit: () => builder,
+      single: () => notReady(),
+      then: (resolve) => resolve({ data: [], error: null, count: 0 }),
+    }
+    return builder
+  }
+  const channel = () => {
+    const ch = { on: () => ch, subscribe: () => ch }
+    return ch
+  }
+  return {
+    auth: {
+      signUp: notReady,
+      signInWithPassword: notReady,
+      signOut: () => Promise.resolve({ error: null }),
+      getUser: () => Promise.resolve({ data: { user: null } }),
+      getSession: () => Promise.resolve({ data: { session: null } }),
+      onAuthStateChange: () => ({
+        data: { subscription: { unsubscribe: () => {} } },
+      }),
+    },
+    from: queryBuilder,
+    rpc: () => Promise.resolve({ data: null, error: null }),
+    channel,
+    removeChannel: () => {},
+    storage: { from: () => ({ upload: notReady, getPublicUrl: () => ({ data: { publicUrl: '' } }) }) },
+  }
+}
 
-// ─── AUTH SERVICE ─────────────────────────────────────────────────────────────
+const supabase = SUPABASE_CONFIGURED
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : createStubClient()
+
 export const AuthService = {
-  async signUp({ email, password, name }) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
-    // Create profile row
-    const avatar = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    await supabase.from('profiles').insert({
-      auth_id: data.user.id,
-      email,
-      name,
-      avatar,
-    });
-    return data;
+  async signUp({ email, password, name, username } = {}) {
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    if (error) throw error
+    if (data.user) {
+      const { error: insertError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        auth_id: data.user.id,
+        name: name || username,
+        email,
+      })
+      if (insertError) throw insertError
+    }
+    return data
   },
 
-  async signIn({ email, password }) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
+  async signIn({ email, password } = {}) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
+    return data
   },
 
   async signOut() {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+  },
+
+  async getUser() {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) throw error
+    return data?.user ?? null
+  },
+
+  onAuthStateChange(callback) {
+    return supabase.auth.onAuthStateChange((_event, session) => {
+      callback(session?.user ?? null)
+    })
+  },
+
+  // Alias kept for backward compatibility with App.jsx
+  onAuthChange(callback) {
+    return supabase.auth.onAuthStateChange((event, session) => {
+      callback(event, session)
+    })
   },
 
   async getSession() {
-    const { data } = await supabase.auth.getSession();
-    return data.session;
+    const { data } = await supabase.auth.getSession()
+    return data.session
   },
 
-  onAuthChange(callback) {
-    return supabase.auth.onAuthStateChange((event, session) => {
-      callback(event, session);
-    });
+  async updateCredentials({ email, password } = {}) {
+    const updates = {}
+    if (email) updates.email = email
+    if (password) updates.password = password
+    if (!Object.keys(updates).length) return
+    const { data, error } = await supabase.auth.updateUser(updates)
+    if (error) throw error
+    return data
   },
+}
 
-  async resetPassword(email) {
-    return supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://newhorizon.app/reset-password',
-    });
-  },
-};
-
-// ─── PROFILE SERVICE ──────────────────────────────────────────────────────────
 export const ProfileService = {
   async getProfile(userId) {
-    const { data, error } = await filterProfileByUser(
-      supabase.from('profiles').select('*'),
-      userId,
-    ).single();
-    if (error) throw error;
-    return data;
-  },
-
-  async getMyProfile() {
-    const session = await AuthService.getSession();
-    if (!session) return null;
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('auth_id', session.user.id)
-      .single();
-    if (error) throw error;
-    return data;
+      .eq('id', userId)
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async getMyProfile() {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) throw error
+    if (!data?.user) return null
+    return ProfileService.getProfile(data.user.id)
+  },
+
+  // Public-facing member browse (Connect page, community list). Only ever
+  // select fields that are safe to show other members — never offense_type,
+  // email, ban_reason, or other private/criminal-history columns. See
+  // CLAUDE.md: "Treat criminal-history fields as private."
+  async getCommunity({ state: stateFilter, limit = 30 } = {}) {
+    let query = supabase
+      .from('profiles')
+      .select('id, name, avatar, avatar_url, age, state, bio, release_year, interests, is_verified, last_seen, show_state, online')
+      .eq('public_profile', true)
+      .eq('is_banned', false)
+      .limit(limit)
+    if (stateFilter && stateFilter !== 'All') query = query.eq('state', stateFilter)
+    const { data, error } = await query
+    if (error) throw error
+    return data
   },
 
   async updateProfile(userId, updates) {
-    const { data, error } = await filterProfileByUser(
-      supabase
-        .from('profiles')
-        .update({ ...updates, updated_at: new Date().toISOString() }),
-      userId,
-    )
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  },
-
-  async savePushToken(userId, token) {
-    return filterProfileByUser(
-      supabase.from('profiles').update({ push_token: token }),
-      userId,
-    );
-  },
-
-  async getCommunity({ state, limit = 20, offset = 0 }) {
-    let query = supabase
+    const { data, error } = await supabase
       .from('profiles')
+<<<<<<< HEAD
       .select('id,name,avatar,avatar_url,age,state,bio,offense_type,release_year,interests,last_seen,online')
       .eq('public_profile', true)
       .eq('is_banned', false)
@@ -125,259 +186,277 @@ export const ProfileService = {
     const { data, error } = await query;
     if (error) throw error;
     return data;
+=======
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+>>>>>>> origin/main
   },
 
-  async updateLastSeen(userId) {
-    return filterProfileByUser(
-      supabase
-        .from('profiles')
-        .update({ last_seen: new Date().toISOString() }),
-      userId,
-    );
+  async uploadAvatar(userId, file) {
+    const ext = file.name.split('.').pop()
+    const path = `${userId}/avatar.${ext}`
+    if (path.includes('..')) throw new Error('Invalid path')
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true })
+    if (uploadError) throw uploadError
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    await ProfileService.updateProfile(userId, { avatar_url: publicUrl })
+    return publicUrl
   },
-};
+}
 
-// ─── CONNECTIONS SERVICE ──────────────────────────────────────────────────────
 export const ConnectionService = {
-  async like(fromUserId, toUserId) {
+  async likeProfile(userId, targetId) {
     const { data, error } = await supabase
       .from('connections')
-      .upsert({ user_a: fromUserId, user_b: toUserId, status: 'pending' })
+      .insert({ user_a: userId, user_b: targetId })
       .select()
-      .single();
-    if (error) throw error;
-    return data; // trigger will auto-match if mutual
+      .single()
+    if (error) throw error
+    return data
   },
 
-  async unlike(fromUserId, toUserId) {
-    return supabase
+  async unlikeProfile(userId, targetId) {
+    const { error } = await supabase
       .from('connections')
       .delete()
-      .eq('user_a', fromUserId)
-      .eq('user_b', toUserId);
+      .eq('user_a', userId)
+      .eq('user_b', targetId)
+    if (error) throw error
   },
 
-  async getMatches(userId) {
-    const { data } = await supabase
+  async getConnections(userId) {
+    const { data, error } = await supabase
       .from('connections')
-      .select(`
-        *,
-        user_a_profile:profiles!connections_user_a_fkey(id,name,avatar,state,online),
-        user_b_profile:profiles!connections_user_b_fkey(id,name,avatar,state,online)
-      `)
-      .or(`user_a.eq.${userId},user_b.eq.${userId}`)
-      .eq('status', 'matched');
-    return data;
-  },
-};
-
-// ─── MESSAGING SERVICE ────────────────────────────────────────────────────────
-export const MessageService = {
-  getConversationId(userId1, userId2) {
-    return [userId1, userId2].sort().join('_');
-  },
-
-  async getConversations(userId) {
-    const { data } = await supabase
-      .from('messages')
-      .select(`
-        conversation_id,
-        content,
-        created_at,
-        read,
-        sender:profiles!messages_sender_id_fkey(id,name,avatar),
-        recipient:profiles!messages_recipient_id_fkey(id,name,avatar)
-      `)
-      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
-      .order('created_at', { ascending: false });
-    // Deduplicate to one row per conversation
-    const seen = new Set();
-    return (data || []).filter(m => {
-      if (seen.has(m.conversation_id)) return false;
-      seen.add(m.conversation_id);
-      return true;
-    });
-  },
-
-  async getMessages(conversationId, limit = 50, before = null) {
-    let query = supabase
-      .from('messages')
       .select('*')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-      .limit(limit);
-    if (before) query = query.lt('created_at', before);
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
+      .or(`user_a.eq.${userId},user_b.eq.${userId}`)
+    if (error) throw error
+    return data
+  },
+}
+
+export const JobService = {
+  async getJobs(filters = {}) {
+    return JobService.listJobs(filters)
+  },
+
+  async listJobs(filters = {}) {
+    let query = supabase.from('jobs').select('*').eq('is_approved', true).order('created_at', { ascending: false })
+    if (filters.location) query = query.ilike('location', `%${filters.location}%`)
+    if (filters.fair_chance) query = query.eq('felony_friendly', true)
+    const { data, error } = await query
+    if (error) throw error
+    return data
+  },
+
+  async getJob(id) {
+    const { data, error } = await supabase.from('jobs').select('*').eq('id', id).single()
+    if (error) throw error
+    return data
+  },
+
+  async saveJob(userId, jobId) {
+    const { error } = await supabase.from('saved_jobs').insert({ user_id: userId, job_id: jobId })
+    if (error) throw error
+  },
+
+  async getSavedJobs(userId) {
+    const { data, error } = await supabase
+      .from('saved_jobs')
+      .select('*, job:jobs(*)')
+      .eq('user_id', userId)
+    if (error) throw error
+    return data
+  },
+
+  async unsaveJob(userId, jobId) {
+    const { error } = await supabase
+      .from('saved_jobs')
+      .delete()
+      .eq('user_id', userId)
+      .eq('job_id', jobId)
+    if (error) throw error
+  },
+
+  async applyToJob(userId, jobId) {
+    const { data, error } = await supabase
+      .from('job_applications')
+      .insert({ user_id: userId, job_id: jobId, status: 'submitted' })
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async listApplications(userId) {
+    const { data, error } = await supabase
+      .from('job_applications')
+      .select('*, job:jobs(*)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data
+  },
+}
+
+export const MessageService = {
+  async getUnreadCount(userId) {
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', userId)
+      .eq('read', false)
+    if (error) throw error
+    return count ?? 0
+  },
+
+  async listConversations(userId) {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*, sender:profiles!sender_id(id, name), recipient:profiles!recipient_id(id, name)')
+      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    const seen = new Set()
+    return data.filter(m => {
+      const key = [m.sender_id, m.recipient_id].sort().join('-')
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  },
+
+  async getMessages(userId, partnerId) {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*, sender:profiles!sender_id(id, name)')
+      .or(`and(sender_id.eq.${userId},recipient_id.eq.${partnerId}),and(sender_id.eq.${partnerId},recipient_id.eq.${userId})`)
+      .order('created_at')
+    if (error) throw error
+    await supabase.from('messages').update({ read: true, read_at: new Date().toISOString() }).eq('sender_id', partnerId).eq('recipient_id', userId).eq('read', false)
+    return data
   },
 
   async sendMessage(senderId, recipientId, content) {
-    const conversationId = this.getConversationId(senderId, recipientId);
     const { data, error } = await supabase
       .from('messages')
-      .insert({ conversation_id: conversationId, sender_id: senderId, recipient_id: recipientId, content })
+      .insert({ sender_id: senderId, recipient_id: recipientId, content })
       .select()
-      .single();
-    if (error) throw error;
-    return data;
+      .single()
+    if (error) throw error
+    return data
   },
 
-  async markRead(conversationId, userId) {
+  subscribeToMessages(userId, partnerId, callback) {
     return supabase
-      .from('messages')
-      .update({ read: true, read_at: new Date().toISOString() })
-      .eq('conversation_id', conversationId)
-      .eq('recipient_id', userId)
-      .eq('read', false);
-  },
-
-  async getUnreadCount(userId) {
-    const { count } = await supabase
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('recipient_id', userId)
-      .eq('read', false);
-    return count || 0;
-  },
-
-  // Real-time subscription for a conversation
-  subscribeToConversation(conversationId, onMessage) {
-    return supabase
-      .channel(`convo:${conversationId}`)
+      .channel(`messages:${[userId, partnerId].sort().join('-')}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: `conversation_id=eq.${conversationId}`,
-      }, payload => onMessage(payload.new))
-      .subscribe();
+        filter: `recipient_id=eq.${userId}`,
+      }, payload => callback(payload.new))
+      .subscribe()
   },
 
   unsubscribe(channel) {
-    supabase.removeChannel(channel);
+    supabase.removeChannel(channel)
   },
-};
+}
 
-// ─── JOBS SERVICE ─────────────────────────────────────────────────────────────
-export const JobService = {
-  async getJobs({ state, type, search, limit = 20, offset = 0 } = {}) {
-    let query = supabase
-      .from('jobs')
-      .select('*')
-      .eq('is_active', true)
-      .eq('is_approved', true)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (state && state !== 'All' && state !== 'Remote') query = query.or(`state.eq.${state},state.eq.Remote`);
-    if (state === 'Remote') query = query.eq('state', 'Remote');
-    if (type && type !== 'All') query = query.eq('job_type', type);
-    if (search) query = query.or(`title.ilike.%${search}%,company.ilike.%${search}%`);
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
+export const BlogService = {
+  async getPosts(limit) {
+    return BlogService.listPosts(limit)
   },
 
-  async saveJob(userId, jobId) {
-    return supabase.from('saved_jobs').upsert({ user_id: userId, job_id: jobId });
-  },
-
-  async unsaveJob(userId, jobId) {
-    return supabase.from('saved_jobs').delete().eq('user_id', userId).eq('job_id', jobId);
-  },
-
-  async getSavedJobs(userId) {
-    const { data } = await supabase
-      .from('saved_jobs')
-      .select('job_id, jobs(*)')
-      .eq('user_id', userId);
-    return (data || []).map(r => r.jobs);
-  },
-
-  async apply(jobId, userId, { coverNote, phone } = {}) {
+  async listPosts(limit = 20) {
     const { data, error } = await supabase
-      .from('job_applications')
-      .insert({ job_id: jobId, user_id: userId, cover_note: coverNote, phone })
+      .from('blog_posts')
+      .select('*, author:profiles(id, name)')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    if (error) throw error
+    return data
+  },
+
+  async getPost(id) {
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select('*, author:profiles(id, name)')
+      .eq('id', id)
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async createPost(userId, { title, content, category }) {
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .insert({ author_id: userId, title, content, category })
       .select()
-      .single();
-    if (error) throw error;
-    // The `increment_job_apps` AFTER INSERT trigger on job_applications
-    // updates jobs.applications. Do not call a separate RPC here or the
-    // counter would double-increment (and the previously referenced
-    // `increment` RPC does not exist in the schema).
-    return data;
+      .single()
+    if (error) throw error
+    return data
   },
 
-  async getMyApplications(userId) {
-    const { data } = await supabase
-      .from('job_applications')
-      .select('*, job:jobs(*)')
-      .eq('user_id', userId)
-      .order('applied_at', { ascending: false });
-    return data;
+  async likePost(userId, postId) {
+    const { error } = await supabase.from('blog_likes').insert({ user_id: userId, post_id: postId })
+    if (error) throw error
+    await supabase.rpc('increment_post_likes', { post_id: postId })
   },
-};
+}
 
-// ─── NOTIFICATIONS SERVICE ────────────────────────────────────────────────────
 export const NotificationService = {
-  async getNotifications(userId, limit = 30) {
+  async getUnreadCount(userId) {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('read', false)
+    if (error) throw error
+    return count ?? 0
+  },
+
+  async listNotifications(userId) {
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(limit);
-    if (error) throw error;
-    return data;
+      .limit(30)
+    if (error) throw error
+    return data
   },
 
   async markRead(notificationId) {
-    return supabase
-      .from('notifications')
-      .update({ read: true, read_at: new Date().toISOString() })
-      .eq('id', notificationId);
+    const { error } = await supabase.from('notifications').update({ read: true, read_at: new Date().toISOString() }).eq('id', notificationId)
+    if (error) throw error
   },
 
   async markAllRead(userId) {
-    return supabase
-      .from('notifications')
-      .update({ read: true, read_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .eq('read', false);
+    const { error } = await supabase.from('notifications').update({ read: true, read_at: new Date().toISOString() }).eq('user_id', userId).eq('read', false)
+    if (error) throw error
   },
 
-  async deleteNotification(notificationId) {
+  subscribeToNotifications(userId, callback) {
     return supabase
-      .from('notifications')
-      .delete()
-      .eq('id', notificationId);
-  },
-
-  async getUnreadCount(userId) {
-    const { count } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('read', false);
-    return count || 0;
-  },
-
-  // Real-time notification subscription
-  subscribeToNotifications(userId, onNotification) {
-    return supabase
-      .channel(`notifs:${userId}`)
+      .channel(`notifications:${userId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'notifications',
         filter: `user_id=eq.${userId}`,
-      }, payload => onNotification(payload.new))
-      .subscribe();
+      }, payload => callback(payload.new))
+      .subscribe()
   },
+}
 
+<<<<<<< HEAD
   unsubscribe(channel) {
     if (channel) supabase.removeChannel(channel);
   },
@@ -511,3 +590,6 @@ serve(async (req) => {
   return new Response(await res.text(), { status: 200 });
 });
 `;
+=======
+export default supabase
+>>>>>>> origin/main

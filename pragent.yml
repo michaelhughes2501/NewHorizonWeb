@@ -1,0 +1,8 @@
+# PR coordinator config (stack: unknown)
+fail_on: high
+required_files:
+  - "README*"
+  - ".gitignore"
+expected_dirs: []
+auto_fix:
+  enabled: false

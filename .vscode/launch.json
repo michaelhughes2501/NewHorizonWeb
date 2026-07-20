@@ -8,14 +8,22 @@
       "cwd": "${workspaceFolder}/new-horizon-web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
     },
     {
-      "name": "Chrome: client",
+      "name": "Chrome: New Horizon",
       "type": "chrome",
       "request": "launch",
       "url": "http://localhost:5173",
       "webRoot": "${workspaceFolder}/new-horizon-web"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full: Dev Server + Chrome",
+      "configurations": ["Vite: dev", "Chrome: New Horizon"],
+      "stopAll": true
     }
   ]
 }
