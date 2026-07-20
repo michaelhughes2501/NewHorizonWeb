@@ -250,7 +250,7 @@ CREATE POLICY "read approved jobs" ON jobs FOR SELECT USING (is_active = TRUE AN
 CREATE POLICY "read published posts" ON blog_posts FOR SELECT USING (is_published = TRUE AND is_approved = TRUE);
 
 -- Blog likes: anyone authenticated can read; users manage their own
-CREATE POLICY "read blog likes" ON blog_likes FOR SELECT USING (TRUE);
+CREATE POLICY "read blog likes" ON blog_likes FOR SELECT TO authenticated USING (TRUE);
 CREATE POLICY "own blog likes" ON blog_likes FOR ALL USING (
   user_id = (SELECT id FROM profiles WHERE auth_id = auth.uid())
 );
@@ -322,7 +322,7 @@ RETURNS VOID AS $$
 BEGIN
   UPDATE blog_posts SET likes = likes + 1 WHERE id = post_id;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- SEED DATA
