@@ -3,11 +3,8 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import "./index.css";
 import App from "./App.jsx";
-<<<<<<< HEAD
 import NotFound from "./pages/NotFound.jsx";
-=======
 import { AuthService } from "./services/database-service.js";
->>>>>>> origin/main
 
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"));
 const NotificationCenter = lazy(() => import("./pages/NotificationCenter.jsx"));

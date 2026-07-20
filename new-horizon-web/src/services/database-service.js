@@ -174,26 +174,12 @@ export const ProfileService = {
   async updateProfile(userId, updates) {
     const { data, error } = await supabase
       .from('profiles')
-<<<<<<< HEAD
-      .select('id,name,avatar,avatar_url,age,state,bio,offense_type,release_year,interests,last_seen,online')
-      .eq('public_profile', true)
-      .eq('is_banned', false)
-      .eq('is_active', true)
-      .order('last_seen', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (state && state !== 'All') query = query.eq('state', state);
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
-=======
       .update(updates)
       .eq('id', userId)
       .select()
       .single()
     if (error) throw error
     return data
->>>>>>> origin/main
   },
 
   async uploadAvatar(userId, file) {
@@ -456,140 +442,10 @@ export const NotificationService = {
   },
 }
 
-<<<<<<< HEAD
+
   unsubscribe(channel) {
     if (channel) supabase.removeChannel(channel);
   },
+}
 
-  // Send Expo push notification
-  async sendPushNotification(expoPushToken, { title, body, data = {} }) {
-    if (!expoPushToken) return;
-    try {
-      await fetch(EXPO_PUSH_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ to: expoPushToken, title, body, data, sound: 'default', badge: 1 }),
-      });
-    } catch (e) {
-      console.error('Push notification failed:', e);
-    }
-  },
-
-  // Send push via Edge Function (server-side, recommended)
-  async sendServerPush(userId, notification) {
-    return supabase.functions.invoke('send-push', {
-      body: { user_id: userId, ...notification },
-    });
-  },
-
-  // Create a notification record + send push
-  async createAndSend(userId, { type, title, body, icon = '🔔', data = {}, actionUrl }) {
-    // 1. Insert into DB
-    await supabase.from('notifications').insert({ user_id: userId, type, title, body, icon, data, action_url: actionUrl });
-    // 2. Get user's push token
-    const { data: profile, error } = await filterProfileByUser(
-      supabase.from('profiles').select('push_token, push_notifs'),
-      userId,
-    ).single();
-    if (error && error.code !== 'PGRST116') throw error;
-    // 3. Send push if enabled
-    if (profile?.push_notifs && profile?.push_token) {
-      await this.sendPushNotification(profile.push_token, { title, body, data });
-    }
-  },
-};
-
-// ─── BLOG SERVICE ─────────────────────────────────────────────────────────────
-export const BlogService = {
-  async getPosts({ category, limit = 12, offset = 0 } = {}) {
-    let query = supabase
-      .from('blog_posts')
-      .select('*, author:profiles(name,avatar)')
-      .eq('is_published', true)
-      .eq('is_approved', true)
-      .order('published_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-    if (category && category !== 'All') query = query.eq('category', category);
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
-  },
-
-  async likePost(postId, userId) {
-    // Idempotent like via UNIQUE(post_id, user_id) on blog_likes.
-    const { error: likeError } = await supabase
-      .from('blog_likes')
-      .upsert({ post_id: postId, user_id: userId });
-    if (likeError) throw likeError;
-    // Increment the cached counter via RPC (defined in database-schema.sql).
-    await supabase.rpc('increment_post_likes', { post_id: postId });
-  },
-
-  async submitPost(userId, post) {
-    return supabase.from('blog_posts').insert({
-      author_id: userId,
-      ...post,
-      is_published: false,
-      is_approved: false,
-    });
-  },
-};
-
-// ─── REPORTS SERVICE ──────────────────────────────────────────────────────────
-export const ReportService = {
-  async submit(reporterId, { targetType, targetId, reason, details }) {
-    return supabase.from('reports').insert({
-      reporter_id: reporterId,
-      target_type: targetType,
-      target_id: targetId,
-      reason,
-      details,
-    });
-  },
-};
-
-// ─── REAL-TIME PRESENCE ───────────────────────────────────────────────────────
-export const PresenceService = {
-  channel: null,
-
-  async joinPresence(userId) {
-    this.channel = supabase.channel('online-users', {
-      config: { presence: { key: userId } },
-    });
-    this.channel.on('presence', { event: 'sync' }, () => {
-      const state = this.channel.presenceState();
-      return Object.keys(state);
-    }).subscribe(async status => {
-      if (status === 'SUBSCRIBED') {
-        await this.channel.track({ user_id: userId, online_at: new Date().toISOString() });
-      }
-    });
-    return this.channel;
-  },
-
-  leavePresence() {
-    if (this.channel) supabase.removeChannel(this.channel);
-  },
-};
-
-// ─── EDGE FUNCTION: send-push (deploy to supabase/functions/send-push/index.ts)
-export const EDGE_FUNCTION_PUSH = `
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-serve(async (req) => {
-  const { user_id, title, body, data } = await req.json();
-  const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
-  const { data: profile } = await supabase.from('profiles').select('push_token,push_notifs').eq('id', user_id).single();
-  if (!profile?.push_token || !profile?.push_notifs) return new Response('No token', { status: 200 });
-  const res = await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to: profile.push_token, title, body, data, sound: 'default' }),
-  });
-  return new Response(await res.text(), { status: 200 });
-});
-`;
-=======
 export default supabase
->>>>>>> origin/main
