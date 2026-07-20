@@ -440,8 +440,6 @@ export const NotificationService = {
       }, payload => callback(payload.new))
       .subscribe()
   },
-}
-
 
   unsubscribe(channel) {
     if (channel) supabase.removeChannel(channel);

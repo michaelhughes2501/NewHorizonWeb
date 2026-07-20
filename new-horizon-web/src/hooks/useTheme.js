@@ -14,7 +14,7 @@ export function useTheme() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored === "dark" || stored === "light") return stored;
-    } catch (_) {
+    } catch {
       // localStorage unavailable (SSR / private browsing edge cases)
     }
     // 2. Fall back to system preference
@@ -34,7 +34,9 @@ export function useTheme() {
     }
     try {
       localStorage.setItem(STORAGE_KEY, theme);
-    } catch (_) {}
+    } catch {
+      // Ignore storage errors (e.g., private browsing)
+    }
   }, [theme]);
 
   // Listen for OS-level preference changes (only if user hasn't overridden)
@@ -47,7 +49,7 @@ export function useTheme() {
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (!stored) setThemeState(e.matches ? "dark" : "light");
-      } catch (_) {
+      } catch {
         setThemeState(e.matches ? "dark" : "light");
       }
     };
