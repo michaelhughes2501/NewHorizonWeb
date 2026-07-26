@@ -420,7 +420,17 @@ function Sidebar({ page, setPage }) {
       <div
         style={{ padding: "20px 20px 14px", borderBottom: "1px solid #2A2A2C" }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <Link
+          to="/"
+          aria-label="Back to New Horizon member app"
+          title="Back to member app"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            textDecoration: "none",
+          }}
+        >
           <div
             style={{
               width: 28,
@@ -453,7 +463,7 @@ function Sidebar({ page, setPage }) {
               ADMIN PANEL
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       <div style={{ padding: "12px 10px", flex: 1 }}>
