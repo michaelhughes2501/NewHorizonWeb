@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   AuthService,
   NotificationService,
@@ -693,6 +694,20 @@ export default function NotificationCenter() {
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 28 }}>
+          <Link
+            to="/"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 13,
+              fontWeight: 500,
+              color: T.gold,
+              marginBottom: 14,
+            }}
+          >
+            ← Back to New Horizon
+          </Link>
           <h1
             style={{
               fontFamily: "'Cormorant Garamond',serif",
@@ -1131,30 +1146,35 @@ export default function NotificationCenter() {
                   ["Start Time", "22:00"],
                   ["End Time", "07:00"],
                   ["Timezone", "America/Denver"],
-                ].map(([l, d]) => (
-                  <div key={l}>
-                    <label
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 500,
-                        display: "block",
-                        marginBottom: 6,
-                      }}
-                    >
-                      {l}
-                    </label>
-                    <input
-                      defaultValue={d}
-                      style={{
-                        border: `1px solid ${T.mist}`,
-                        borderRadius: 8,
-                        padding: "8px 12px",
-                        fontSize: 13,
-                        width: 160,
-                      }}
-                    />
-                  </div>
-                ))}
+                ].map(([l, d]) => {
+                  const fieldId = `quiet-hours-${l.toLowerCase().replace(/\s+/g, "-")}`;
+                  return (
+                    <div key={l}>
+                      <label
+                        htmlFor={fieldId}
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 500,
+                          display: "block",
+                          marginBottom: 6,
+                        }}
+                      >
+                        {l}
+                      </label>
+                      <input
+                        id={fieldId}
+                        defaultValue={d}
+                        style={{
+                          border: `1px solid ${T.mist}`,
+                          borderRadius: 8,
+                          padding: "8px 12px",
+                          fontSize: 13,
+                          width: 160,
+                        }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
               <button
                 onClick={savePrefs}
