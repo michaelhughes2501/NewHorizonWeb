@@ -1201,6 +1201,7 @@ function AuthPage({ onAuth, backendReady }) {
           {mode === "register" && (
             <div>
               <label
+                htmlFor="auth-name"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -1211,6 +1212,8 @@ function AuthPage({ onAuth, backendReady }) {
                 Full Name
               </label>
               <input
+                id="auth-name"
+                autoComplete="name"
                 placeholder="Your full name"
                 value={form.name}
                 onChange={(e) => set("name", e.target.value)}
@@ -1219,6 +1222,7 @@ function AuthPage({ onAuth, backendReady }) {
           )}
           <div>
             <label
+              htmlFor="auth-email"
               style={{
                 fontSize: 13,
                 fontWeight: 500,
@@ -1229,7 +1233,9 @@ function AuthPage({ onAuth, backendReady }) {
               Email Address
             </label>
             <input
+              id="auth-email"
               type="email"
+              autoComplete="email"
               placeholder="you@email.com"
               value={form.email}
               onChange={(e) => set("email", e.target.value)}
@@ -1238,6 +1244,7 @@ function AuthPage({ onAuth, backendReady }) {
           </div>
           <div>
             <label
+              htmlFor="auth-password"
               style={{
                 fontSize: 13,
                 fontWeight: 500,
@@ -1248,7 +1255,9 @@ function AuthPage({ onAuth, backendReady }) {
               Password
             </label>
             <input
+              id="auth-password"
               type="password"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
               placeholder="••••••••"
               value={form.password}
               onChange={(e) => set("password", e.target.value)}
@@ -1258,6 +1267,7 @@ function AuthPage({ onAuth, backendReady }) {
           {mode === "register" && (
             <div>
               <label
+                htmlFor="auth-confirm-password"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -1268,7 +1278,9 @@ function AuthPage({ onAuth, backendReady }) {
                 Confirm Password
               </label>
               <input
+                id="auth-confirm-password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="••••••••"
                 value={form.confirmPassword}
                 onChange={(e) => set("confirmPassword", e.target.value)}
@@ -2746,6 +2758,7 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label
+                htmlFor="job-apply-name"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -2755,10 +2768,11 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
               >
                 Full Name
               </label>
-              <input defaultValue={user?.name || ""} />
+              <input id="job-apply-name" autoComplete="name" defaultValue={user?.name || ""} />
             </div>
             <div>
               <label
+                htmlFor="job-apply-email"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -2768,10 +2782,11 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
               >
                 Email Address
               </label>
-              <input placeholder="your@email.com" />
+              <input id="job-apply-email" type="email" autoComplete="email" placeholder="your@email.com" />
             </div>
             <div>
               <label
+                htmlFor="job-apply-phone"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -2781,10 +2796,11 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
               >
                 Phone Number
               </label>
-              <input placeholder="(555) 000-0000" />
+              <input id="job-apply-phone" type="tel" autoComplete="tel" placeholder="(555) 000-0000" />
             </div>
             <div>
               <label
+                htmlFor="job-apply-intro"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -2795,6 +2811,7 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
                 Brief Introduction
               </label>
               <textarea
+                id="job-apply-intro"
                 rows={3}
                 placeholder="Tell them why you're a great fit..."
               />
@@ -2977,6 +2994,9 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
               <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
                 <button
                   onClick={() => toggleSave(j.id)}
+                  aria-label={j.saved ? `Unsave ${j.title}` : `Save ${j.title}`}
+                  aria-pressed={Boolean(j.saved)}
+                  title={j.saved ? "Unsave job" : "Save job"}
                   style={{
                     width: 32,
                     height: 32,
@@ -2986,7 +3006,10 @@ function JobsPage({ user, jobs, setJobs, backendReady }) {
                     fontSize: 14,
                     cursor: "pointer",
                     color: j.saved ? T.gold : T.slate,
+                    transition: "transform .15s, background .15s, border-color .15s",
                   }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.08)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
                 >
                   {j.saved ? "★" : "☆"}
                 </button>
@@ -3272,6 +3295,7 @@ function CalculatorPage() {
         >
           <div style={{ gridColumn: "1/-1" }}>
             <label
+              htmlFor="calc-state"
               style={{
                 fontSize: 13,
                 fontWeight: 500,
@@ -3282,6 +3306,7 @@ function CalculatorPage() {
               State of Sentencing
             </label>
             <select
+              id="calc-state"
               value={form.state}
               onChange={(e) => set("state", e.target.value)}
             >
@@ -3295,6 +3320,7 @@ function CalculatorPage() {
           </div>
           <div>
             <label
+              htmlFor="calc-sentence"
               style={{
                 fontSize: 13,
                 fontWeight: 500,
@@ -3305,6 +3331,7 @@ function CalculatorPage() {
               Sentence Length (years)
             </label>
             <input
+              id="calc-sentence"
               type="number"
               min=".5"
               step=".5"
@@ -3315,6 +3342,7 @@ function CalculatorPage() {
           </div>
           <div>
             <label
+              htmlFor="calc-start-date"
               style={{
                 fontSize: 13,
                 fontWeight: 500,
@@ -3325,6 +3353,7 @@ function CalculatorPage() {
               Sentence Start Date
             </label>
             <input
+              id="calc-start-date"
               type="date"
               value={form.startDate}
               onChange={(e) => set("startDate", e.target.value)}
@@ -3332,6 +3361,7 @@ function CalculatorPage() {
           </div>
           <div>
             <label
+              htmlFor="calc-offense-type"
               style={{
                 fontSize: 13,
                 fontWeight: 500,
@@ -3342,6 +3372,7 @@ function CalculatorPage() {
               Offense Classification
             </label>
             <select
+              id="calc-offense-type"
               value={form.offenseType}
               onChange={(e) => set("offenseType", e.target.value)}
             >
@@ -4183,6 +4214,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
           >
             <div>
               <label
+                htmlFor="profile-edit-name"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -4193,12 +4225,15 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
                 Full Name
               </label>
               <input
+                id="profile-edit-name"
+                autoComplete="name"
                 value={form.name}
                 onChange={(e) => set("name", e.target.value)}
               />
             </div>
             <div>
               <label
+                htmlFor="profile-edit-age"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -4209,6 +4244,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
                 Age
               </label>
               <input
+                id="profile-edit-age"
                 type="number"
                 value={form.age}
                 onChange={(e) => set("age", e.target.value)}
@@ -4216,6 +4252,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
             </div>
             <div>
               <label
+                htmlFor="profile-edit-state"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -4226,6 +4263,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
                 State
               </label>
               <select
+                id="profile-edit-state"
                 value={form.state}
                 onChange={(e) => set("state", e.target.value)}
               >
@@ -4249,6 +4287,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
             </div>
             <div>
               <label
+                htmlFor="profile-edit-offense"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -4259,6 +4298,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
                 Offense Category
               </label>
               <select
+                id="profile-edit-offense"
                 value={form.offense}
                 onChange={(e) => set("offense", e.target.value)}
               >
@@ -4275,6 +4315,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
             </div>
             <div style={{ gridColumn: "1/-1" }}>
               <label
+                htmlFor="profile-edit-bio"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -4285,6 +4326,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
                 Bio
               </label>
               <textarea
+                id="profile-edit-bio"
                 rows={3}
                 value={form.bio}
                 onChange={(e) => set("bio", e.target.value)}
@@ -4294,6 +4336,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
             </div>
             <div style={{ gridColumn: "1/-1" }}>
               <label
+                htmlFor="profile-edit-interests"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -4304,6 +4347,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
                 Interests (comma-separated)
               </label>
               <input
+                id="profile-edit-interests"
                 value={form.interests}
                 onChange={(e) => set("interests", e.target.value)}
                 placeholder="Music, Cooking, Sports..."
@@ -4469,6 +4513,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label
+                htmlFor="account-email"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -4479,7 +4524,9 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
                 Email Address
               </label>
               <input
+                id="account-email"
                 type="email"
+                autoComplete="email"
                 placeholder="your@email.com"
                 value={credEmail}
                 onChange={(e) => { setCredEmail(e.target.value); setCredMsg(""); }}
@@ -4487,6 +4534,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
             </div>
             <div>
               <label
+                htmlFor="account-new-password"
                 style={{
                   fontSize: 13,
                   fontWeight: 500,
@@ -4497,7 +4545,9 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
                 New Password
               </label>
               <input
+                id="account-new-password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="••••••••"
                 value={credPassword}
                 onChange={(e) => { setCredPassword(e.target.value); setCredMsg(""); }}

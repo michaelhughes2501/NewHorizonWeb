@@ -1,7 +1,9 @@
 import React, { Suspense, lazy, useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "./index.css";
 import App from "./App.jsx";
+import NotFound from "./pages/NotFound.jsx";
 import { AuthService } from "./services/database-service.js";
 
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"));
@@ -83,36 +85,6 @@ function LoadingScreen() {
     </div>
   );
 }
-
-function NotFound() {
-  return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#FAF8F4", color: "#1C1C1E", fontFamily: "'DM Sans', sans-serif", padding: 24 }}>
-      <div style={{ maxWidth: 520, textAlign: "center" }}>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 44, fontWeight: 400, marginBottom: 12 }}>New Horizon</h1>
-        <p style={{ marginBottom: 20, lineHeight: 1.6 }}>
-          This route does not exist. Use one of the project areas below.
-        </p>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link to="/" style={linkStyle}>Member App</Link>
-          <Link to="/admin" style={linkStyle}>Admin Dashboard</Link>
-          <Link to="/notifications" style={linkStyle}>Notifications</Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const linkStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "10px 18px",
-  borderRadius: 10,
-  background: "#B8975A",
-  color: "white",
-  textDecoration: "none",
-  fontWeight: 500,
-};
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
