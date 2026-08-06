@@ -1,5 +1,7 @@
 # 03 — Dependency Audit
 
+> Snapshot taken from `new-horizon-web/package.json` at audit time (Phase 1, 2026-08). Version currency claims below are relative to that read — re-check before acting on any of them; the ecosystem moves independently of this document.
+
 ## `new-horizon-web/package.json`
 
 ### Runtime deps (safe)

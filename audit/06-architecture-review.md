@@ -2,7 +2,7 @@
 
 ## Current shape
 
-```
+```text
 NewHorizonWeb/                       ← wrapper repo
 ├── admin-dashboard.jsx              ← REFERENCE prototype (per CLAUDE.md)
 ├── mobile-app.jsx                   ← REFERENCE prototype (per CLAUDE.md)

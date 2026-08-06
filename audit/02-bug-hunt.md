@@ -5,9 +5,9 @@
 ### B1 — `npm-publish.yml` cannot succeed
 - **File:** `.github/workflows/npm-publish.yml`
 - **Symptoms:**
-  - `uses: actions/checkout@v7` and `actions/setup-node@v7` — **v7 does not exist** for either action (current stable v4 / v5). Job fails at the "Set up action" step every time it runs.
   - `run: npm ci` at repo root — **root has no `package.json`**, only a `package-lock.json`. `npm ci` errors out with `npm ERR! Cannot read properties of null` when there's no manifest.
   - `run: npm publish` — the nested `new-horizon-web/package.json` declares `"private": true`. npm refuses to publish private packages.
+  - Uses `actions/checkout@v7` and `actions/setup-node@v7`. (Correction from the original audit note — as of 2026-08 both v7 tags **do** exist and resolve, so this alone is not a hard failure. The two points above are.)
 - **Fix:** Delete. **Applied in this pass.**
 
 ### B2 — `.gitignore` Windows separator

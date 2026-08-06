@@ -1,8 +1,10 @@
 # 08 — Fixed Project Structure
 
+> **Proposed target state, not the current tree.** Every entry marked with `←` describes an intended change from Phases A–D of [07-refactor-plan.md](./07-refactor-plan.md). Only the following changes have already landed in this PR: `.gitignore` POSIX slash fix and deletion of `.github/workflows/npm-publish.yml`. Everything else — npm workspaces at root, moving reference prototypes into `_legacy/reference/`, adding `docs/`, untracking `agent-reports/*.json`, adding tests — is not yet done.
+
 Target (option 2 root — npm workspaces):
 
-```
+```text
 NewHorizonWeb/
 │
 ├── package.json                   ← added: workspaces: ["new-horizon-web", "mobile"]

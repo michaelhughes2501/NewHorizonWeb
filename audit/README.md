@@ -30,9 +30,9 @@ Same meta-agents (`buildagent/`, `depagent/`, `pragent/`, `scanner/`) as the oth
 ## Safe fixes applied in this pass
 
 - **`.gitignore`** — replaced `.github\instructions\codacy.instructions.md` (Windows separator) with a POSIX path.
-- **`.github/workflows/npm-publish.yml`** — deleted. Three separate reasons it can't succeed:
-  1. Uses `actions/checkout@v7` and `actions/setup-node@v7` — **these versions don't exist** (current major is v4/v5). Both jobs fail immediately at the setup step.
-  2. Root of the repo has no `package.json` (only `package-lock.json`) — `npm ci` at root fails.
-  3. The nested `new-horizon-web/package.json` declares `"private": true` — `npm publish` cannot publish it even if the workflow reached that step.
+- **`.github/workflows/npm-publish.yml`** — deleted. Two hard-failure reasons it can't succeed:
+  1. Root of the repo has no `package.json` (only `package-lock.json`) — `npm ci` at root fails immediately on missing manifest.
+  2. The nested `new-horizon-web/package.json` declares `"private": true` — `npm publish` refuses to publish private packages even if the workflow reached that step.
+  (The file also uses `actions/checkout@v7` / `actions/setup-node@v7`; those versions **do** exist as of 2026-08 — my earlier note that they didn't was wrong. That alone would not have blocked the workflow. The two points above still do.)
 
 Not touched: `admin-dashboard.jsx`, `mobile-app.jsx`, `notification-system.jsx`, `database-service.js`, `database-schema.sql` at the repo root — CLAUDE.md explicitly documents these as reference / prototype artefacts kept alongside the live app.

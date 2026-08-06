@@ -27,9 +27,9 @@
 ## Concrete gaps
 
 ### G1 — `npm-publish.yml` is unreachable
-- Uses `@v7` action tags that don't exist.
-- Root has no `package.json`.
-- Nested package is `"private": true`.
+- Root has no `package.json` → `npm ci` at root fails.
+- Nested package is `"private": true` → `npm publish` refuses.
+- (Uses `@v7` action tags. As of 2026-08 those versions **do** exist — the original audit note claimed otherwise. That alone would not have blocked the workflow; the two points above did.)
 
 **Deleted in this pass.**
 
