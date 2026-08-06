@@ -8,7 +8,7 @@
 | Env config docs | `ENVIRONMENT.md` — comprehensive. |
 | Env config enforcement | Not verified. |
 | Tests | Not visible in the audited portion of `package.json`. |
-| CI | 6 workflows, all live. |
+| CI | 7 workflows, all live. |
 | Observability | Not verified. |
 | Rate limiting | **Not verified.** RLS is not rate limiting — it authorises row access but does not throttle request frequency, concurrency, or abuse. The actual limiter (a `pgrst.db_pre_request` guard, an Edge Function, a reverse proxy, or the Supabase Auth dashboard limits) needs to be identified. Separate concern from any future `server.js` rate limits. |
 | Security headers | Not verified. |
