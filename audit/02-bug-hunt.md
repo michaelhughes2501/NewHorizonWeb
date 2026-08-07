@@ -24,7 +24,7 @@
 ### L1 — `database-schema.sql` at root differs from `_legacy/standalone/database-schema.sql`
 - **Files:** `database-schema.sql`, `_legacy/standalone/database-schema.sql`
 - **Symptom:** Two SQL files with the same name and different contents. Someone reading either without context has no way to know which is authoritative. CLAUDE.md says the canonical schema lives under `new-horizon-web/supabase/`.
-- **Fix:** Move both root-level `.sql` files into `_legacy/reference/` (matching the reference-prototype pattern for the top-level `.jsx` files). Not applied.
+- **Fix:** Reconcile with the "Not touched" list: the root `database-schema.sql` is intentionally kept as a top-level reference copy (per CLAUDE.md / audit/README.md). Note the one root-level `.sql` differs from the `_legacy/standalone/` copy and defer any move until the retention convention for top-level reference artifacts is settled; do not prescribe moving it into a non-existent `_legacy/reference/`.
 
 ### L2 — `agent-reports/*.json` tracked
 Same as siblings.

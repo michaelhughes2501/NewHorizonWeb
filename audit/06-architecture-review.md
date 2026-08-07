@@ -49,7 +49,7 @@ Recommendation: option 2, if there are ever going to be shared devDeps between w
 
 ### W2 — Root vs `_legacy/standalone/` overlap
 
-Four `.jsx` files at root; the same four files exist under `_legacy/standalone/`. CLAUDE.md says the root ones are reference prototypes — but `_legacy/standalone/` also contains them. This is redundant.
+Change to: "`admin-dashboard.jsx` and `mobile-app.jsx` exist at root and are duplicated under `_legacy/standalone/`. CLAUDE.md says the root ones are reference prototypes — but `_legacy/standalone/` also contains them. (Only those two are duplicated; `notification-system.jsx` and `database-service.js` exist solely under `_legacy/standalone/`.)"
 
 Recommendation: consolidate — move the root reference prototypes into `_legacy/reference/` (or delete them from `_legacy/standalone/` since the root ones are the "current" prototype). Either way, one location.
 
