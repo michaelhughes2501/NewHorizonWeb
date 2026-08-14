@@ -28,7 +28,7 @@
     "eslint": "^10.8.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "globals": "^17.7.0",
+    "globals": "^17.10.0",
     "tailwindcss": "^4.1.14",
     "vite": "^8.1.4"
   }
