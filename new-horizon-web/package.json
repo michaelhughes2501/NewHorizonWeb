@@ -26,10 +26,12 @@
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^6.0.4",
     "eslint": "^10.8.1",
+    "@vitejs/plugin-react": "^6.1.0",
+    "eslint": "^10.8.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.7.0",
     "tailwindcss": "^4.1.14",
-    "vite": "^8.1.4"
+    "vite": "^8.2.2"
   }
 }
