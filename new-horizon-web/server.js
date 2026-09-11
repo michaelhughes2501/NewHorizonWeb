@@ -9,9 +9,13 @@ const dist = join(__dirname, "dist");
 
 app.use(express.static(dist));
 
-// SPA fallback — all unmatched routes serve index.html so client-side routing works.
-// Express 5 no longer accepts the legacy "*" path pattern.
-app.use((_req, res) => {
+// SPA fallback — navigation routes serve index.html so client-side routing works.
+// Missing static assets must remain 404s instead of receiving HTML.
+app.use((req, res) => {
+  if (req.path.includes(".")) {
+    res.sendStatus(404);
+    return;
+  }
   res.sendFile(join(dist, "index.html"));
 });
 

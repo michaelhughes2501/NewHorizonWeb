@@ -3,14 +3,18 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "workspaces": [
+    "new-horizon-web",
+    "mobile"
+  ],
   "scripts": {
-    "dev": "npm --prefix new-horizon-web run dev",
-    "build": "npm --prefix new-horizon-web run build",
-    "lint": "npm --prefix new-horizon-web run lint",
-    "start": "npm --prefix new-horizon-web run start",
-    "preview": "npm --prefix new-horizon-web run preview",
-    "mobile": "npm --prefix mobile run start",
-    "mobile:android": "npm --prefix mobile run android",
-    "mobile:ios": "npm --prefix mobile run ios"
+    "dev": "npm run dev --workspace=new-horizon-web",
+    "build": "npm run build --workspace=new-horizon-web",
+    "lint": "npm run lint --workspace=new-horizon-web",
+    "start": "npm run start --workspace=new-horizon-web",
+    "preview": "npm run preview --workspace=new-horizon-web",
+    "mobile": "npm run start --workspace=mobile",
+    "mobile:android": "npm run android --workspace=mobile",
+    "mobile:ios": "npm run ios --workspace=mobile"
   }
 }

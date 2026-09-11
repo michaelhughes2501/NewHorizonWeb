@@ -44,6 +44,9 @@ The web app is available at `http://localhost:5173`. For a production-style loca
 run, use `npm run build` followed by `npm start`; that serves `dist/` at
 `http://localhost:3000`.
 
+The root workspace installs dependencies for both `new-horizon-web/` and
+`mobile/`. Run `npm run mobile` to start the Expo development server.
+
 ### 3. Mobile App (iOS & Android)
 
 ```bash
