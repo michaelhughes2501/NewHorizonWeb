@@ -6,7 +6,8 @@ Guidance for Codex (and humans) when working in this repository.
 
 **NewHorizonWeb** is the web companion to the `new-horizon` mobile app. The runnable app lives under [`new-horizon-web/`](./new-horizon-web): a **Vite + React 18** SPA wired to **Supabase**, with the database schema in `database-schema.sql` and a JS data-access layer in `database-service.js`.
 
-Top-level `.jsx` files (`admin-dashboard.jsx`, `mobile-app.jsx`, `notification-system.jsx`) are reference / prototype artefacts — not part of the live build.
+Top-level `.jsx` files are compatibility entry points. The maintained applications
+live under `new-horizon-web/` and `mobile/`.
 
 ## Tech stack
 
@@ -41,7 +42,7 @@ See `new-horizon-web/ENVIRONMENT.md` for the full list. Server-only secrets belo
 - `new-horizon-web/supabase/` — Supabase project config / migrations.
 - `database-schema.sql` — canonical PostgreSQL schema.
 - `database-service.js` — thin data-access wrapper.
-- `admin-dashboard.jsx`, `mobile-app.jsx`, `notification-system.jsx` — reference prototypes only; do not import these in `new-horizon-web/`.
+- `admin-dashboard.jsx` and `mobile-app.jsx` — compatibility exports; use the maintained app paths for new code.
 
 ## Conventions
 

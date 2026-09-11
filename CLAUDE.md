@@ -6,7 +6,8 @@ Guidance for Claude Code (and humans) when working in this repository.
 
 **NewHorizonWeb** is the web companion to the `new-horizon` mobile app. The runnable app lives under [`new-horizon-web/`](./new-horizon-web): a **Vite 6 + React 19** SPA wired to **Supabase**, with the database schema in `database-schema.sql` and a JS data-access layer in `database-service.js`.
 
-Top-level `.jsx` files (`admin-dashboard.jsx`, `mobile-app.jsx`, `notification-system.jsx`) are reference / prototype artefacts — **not part of the live build** and not imported anywhere inside `new-horizon-web/src/`.
+Top-level `.jsx` files are compatibility entry points and are not application
+source. The maintained applications live under `new-horizon-web/` and `mobile/`.
 
 ## Tech stack
 
@@ -45,10 +46,8 @@ NewHorizonWeb/
 ├── SECURITY.md
 ├── .github/dependabot.yml                 ← weekly npm + Actions updates (groups: react, vite)
 │
-├── admin-dashboard.jsx                    ← reference prototype only
-├── mobile-app.jsx                         ← reference prototype only (React Native sketch)
-├── notification-system.jsx                ← reference prototype only
-├── database-service.js                    ← top-level reference copy of the service layer
+├── admin-dashboard.jsx                    ← compatibility export
+├── mobile-app.jsx                         ← compatibility export
 ├── database-schema.sql                    ← top-level reference copy of the schema
 ├── scripts.js  style.css                  ← doc/landing helpers (not used by Vite app)
 │
@@ -74,10 +73,12 @@ NewHorizonWeb/
 - Use `react-router-dom` v6 patterns. The current implementation in `src/main.jsx` uses `<BrowserRouter>` with declarative `<Routes>` / `<Route>` and lazy-loaded pages — keep that style consistent (don't mix in `createBrowserRouter` ad-hoc).
 - Use `<img loading="lazy">` and `srcset` for images so pages stay fast.
 - Use the wrappers in `src/services/database-service.js` (Auth/Profile/Job/Message services) rather than calling `supabase` directly from components.
-- Mirror schema changes in **both** `database-schema.sql` (top-level reference) **and** `new-horizon-web/supabase/database-schema.sql` (active migration source). Treat the `supabase/` copy as authoritative for the running app. **Note**: as of this writing the two copies are out of sync — the Supabase copy has extra RLS for `blog_likes`/`audit_log`, policies for `blog_likes`/`saved_jobs`, and an `increment_post_likes` function. Reconcile them when you touch the schema.
+- Mirror schema changes in **both** `database-schema.sql` and
+  `new-horizon-web/supabase/database-schema.sql`. Treat the `supabase/` copy as
+  authoritative for the running app.
 - The brand uses a gold/cream/charcoal palette with Cormorant Garamond + DM Sans typography (defined inside `App.jsx`); don't introduce a CSS framework on top.
 - Treat criminal-history fields as private — store them but never surface them in public API responses.
-- The top-level `*.jsx` and `database-service.js` files at the repo root are documentation/prototype only — **don't import them from the Vite app** and don't bring them into bundles.
+- Use `new-horizon-web/src/services/database-service.js` for web data access.
 
 ## CI / automation
 

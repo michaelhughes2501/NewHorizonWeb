@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   AuthService,
@@ -4590,7 +4590,7 @@ export default function App() {
   const [unreadNotifications, setUnreadNotifications] = useState(3);
   const [booting, setBooting] = useState(BACKEND_READY);
 
-  const refreshUnread = async (userId = user?.id) => {
+  const refreshUnread = useCallback(async (userId = user?.id) => {
     if (!BACKEND_READY || !userId) {
       setUnreadMessages(3);
       return;
@@ -4601,7 +4601,7 @@ export default function App() {
     } catch {
       setUnreadMessages(3);
     }
-  };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!BACKEND_READY) {

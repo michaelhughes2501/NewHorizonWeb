@@ -1,0 +1,16 @@
+{
+  "name": "new-horizon-platform",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm --prefix new-horizon-web run dev",
+    "build": "npm --prefix new-horizon-web run build",
+    "lint": "npm --prefix new-horizon-web run lint",
+    "start": "npm --prefix new-horizon-web run start",
+    "preview": "npm --prefix new-horizon-web run preview",
+    "mobile": "npm --prefix mobile run start",
+    "mobile:android": "npm --prefix mobile run android",
+    "mobile:ios": "npm --prefix mobile run ios"
+  }
+}

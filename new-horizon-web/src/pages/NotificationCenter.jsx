@@ -374,7 +374,10 @@ export default function NotificationCenter() {
           if (active) setStatus("Sign in to load live notifications");
           return;
         }
-        const myProfile = await ProfileService.getProfile(user.id);
+        const [myProfile, liveNotifs] = await Promise.all([
+          ProfileService.getProfile(user.id),
+          NotificationService.listNotifications(user.id),
+        ]);
         if (!active) return;
         setProfile(myProfile);
         setPrefs((p) => ({
@@ -382,8 +385,6 @@ export default function NotificationCenter() {
           push: myProfile?.push_notifs ?? p.push,
           email: myProfile?.email_notifs ?? p.email,
         }));
-        const liveNotifs = await NotificationService.listNotifications(user.id);
-        if (!active) return;
         const mapped = (liveNotifs || []).map(normalizeNotif);
         setNotifs(mapped.length ? mapped : []);
         setStatus("WebSocket Connected");

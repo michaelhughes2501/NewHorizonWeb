@@ -150,6 +150,7 @@ function AuthScreen({ onLogin }) {
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }).start();
+    return () => fadeAnim.stopAnimation();
   }, []);
 
   const handleAuth = async () => {
@@ -335,7 +336,13 @@ function ConnectTab({ onMessage }) {
   const [stateFilter, setStateFilter] = useState('All');
 
   useEffect(() => {
-    mockDB.getCommunity().then(data => { setMembers(data); setLoading(false); });
+    let active = true;
+    mockDB.getCommunity().then(data => {
+      if (!active) return;
+      setMembers(data);
+      setLoading(false);
+    });
+    return () => { active = false; };
   }, []);
 
   const toggleLike = (id) => {
@@ -399,6 +406,7 @@ function MessagesTab({ user, initialPeer }) {
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const scrollRef = useRef(null);
+  const replyTimeoutRef = useRef(null);
   const peers = [
     { id:'u2', name:'Alicia Rivera', avatar:'AR', online:true, preview:'That job board is great!' },
     { id:'u3', name:'Devon Washington', avatar:'DW', online:false, preview:'Stay strong brother.' },
@@ -406,10 +414,20 @@ function MessagesTab({ user, initialPeer }) {
   ];
 
   useEffect(() => {
+    let active = true;
     if (activePeer) {
-      mockDB.getMessages(user.id, activePeer.id).then(setMessages);
+      mockDB.getMessages(user.id, activePeer.id).then(data => {
+        if (active) setMessages(data);
+      });
     }
-  }, [activePeer]);
+    return () => {
+      active = false;
+      if (replyTimeoutRef.current) {
+        clearTimeout(replyTimeoutRef.current);
+        replyTimeoutRef.current = null;
+      }
+    };
+  }, [activePeer, user.id]);
 
   const send = () => {
     if (!input.trim()) return;
@@ -417,10 +435,11 @@ function MessagesTab({ user, initialPeer }) {
     setMessages(prev => [...prev, msg]);
     setInput('');
     setTyping(true);
-    setTimeout(() => {
+    replyTimeoutRef.current = setTimeout(() => {
       setTyping(false);
       const replies = ["That's great to hear! 🙏", "Keep going, you've got this.", "Let me know if I can help."];
       setMessages(prev => [...prev, { id: Date.now().toString(), from: activePeer.id, text: replies[Math.floor(Math.random() * replies.length)], time: 'Now', read: false }]);
+      replyTimeoutRef.current = null;
     }, 1400);
   };
 
@@ -499,7 +518,15 @@ function JobsTab({ user }) {
   const [applying, setApplying] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
 
-  useEffect(() => { mockDB.getJobs().then(data => { setJobs(data); setLoading(false); }); }, []);
+  useEffect(() => {
+    let active = true;
+    mockDB.getJobs().then(data => {
+      if (!active) return;
+      setJobs(data);
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
 
   const applyToJob = async (job) => {
     setApplying(job.id);
@@ -592,7 +619,15 @@ function NotificationsTab({ user }) {
   const [notifs, setNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { mockDB.getNotifications(user.id).then(data => { setNotifs(data); setLoading(false); }); }, []);
+  useEffect(() => {
+    let active = true;
+    mockDB.getNotifications(user.id).then(data => {
+      if (!active) return;
+      setNotifs(data);
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, [user.id]);
 
   const markRead = (id) => setNotifs(p => p.map(n => n.id === id ? { ...n, read: true } : n));
   const markAllRead = () => setNotifs(p => p.map(n => ({ ...n, read: true })));

@@ -4,15 +4,16 @@
 
 ---
 
-## 📁 Files in This Package
+## 📁 Repository Layout
 
-| File                      | Description                                        |
-| ------------------------- | -------------------------------------------------- |
-| `mobile-app.jsx`          | React Native app for iOS & Android                 |
-| `database-schema.sql`     | Full PostgreSQL schema (run in Supabase)           |
-| `database-service.js`     | API service layer — auth, profiles, messages, jobs |
-| `notification-system.jsx` | Notification center + push + email templates       |
-| `admin-dashboard.jsx`     | Full admin panel with all management tools         |
+| Path | Description |
+| --- | --- |
+| `new-horizon-web/` | Maintained Vite + React web application |
+| `mobile/` | Maintained Expo mobile application |
+| `database-schema.sql` | Canonical PostgreSQL schema |
+| `database-service.js` | Reference data-access service |
+| `admin-dashboard.jsx` | Compatibility export for the maintained admin page |
+| `mobile-app.jsx` | Compatibility export for the maintained Expo app |
 
 ---
 
@@ -29,16 +30,19 @@
 ### 2. Web App Setup
 
 ```bash
-git clone https://github.com/yourorg/new-horizon
-cd new-horizon
+git clone https://github.com/michaelhughes2501/NewHorizonWeb
+cd NewHorizonWeb
 npm install
 
-# Create .env.local
-REACT_APP_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-REACT_APP_SUPABASE_ANON_KEY=YOUR_ANON_KEY
+# Copy `new-horizon-web/.env.example` to `new-horizon-web/.env`
+# and set VITE_SUPABASE_URL plus VITE_SUPABASE_ANON_KEY.
 
-npm start
+npm run dev
 ```
+
+The web app is available at `http://localhost:5173`. For a production-style local
+run, use `npm run build` followed by `npm start`; that serves `dist/` at
+`http://localhost:3000`.
 
 ### 3. Mobile App (iOS & Android)
 
@@ -53,8 +57,8 @@ npx expo install react-native-screens react-native-safe-area-context
 npx expo install @supabase/supabase-js react-native-url-polyfill
 npx expo install expo-secure-store react-native-gesture-handler
 
-# Copy mobile-app.jsx → App.tsx
-# Update SUPABASE_URL and SUPABASE_ANON_KEY in App.tsx
+# The maintained Expo entry point is `mobile/App.js`.
+# Configure Supabase through the mobile app environment before wiring a live backend.
 
 # Run on iOS
 npx expo run:ios
