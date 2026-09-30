@@ -16,7 +16,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.6.1",
+    "express-rate-limit": "^8.7.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.1"
