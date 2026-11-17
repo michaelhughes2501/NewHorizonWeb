@@ -10,7 +10,8 @@ const dist = join(__dirname, "dist");
 app.use(express.static(dist));
 
 // SPA fallback — all unmatched routes serve index.html so client-side routing works
-app.get("*", (_req, res) => {
+// Express 5 (path-to-regexp v8) needs a named wildcard; a bare "*" throws at startup.
+app.get("/{*splat}", (_req, res) => {
   res.sendFile(join(dist, "index.html"));
 });
 
