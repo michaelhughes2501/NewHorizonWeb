@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   AuthService,
+  BACKEND_READY,
   BlogService,
   ConnectionService,
   JobService,
@@ -576,21 +577,6 @@ const DEMO_MESSAGES = {
   ],
 };
 
-const hasConfiguredValue = (value, placeholder) =>
-  Boolean(value && value !== placeholder);
-const BACKEND_READY =
-  hasConfiguredValue(
-    import.meta.env.VITE_SUPABASE_URL,
-    "https://YOUR_PROJECT.supabase.co",
-  ) &&
-  (hasConfiguredValue(
-    import.meta.env.VITE_SUPABASE_ANON_KEY,
-    "YOUR_ANON_KEY",
-  ) ||
-    hasConfiguredValue(
-      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      "sb_publishable_xxxxxxxxxxxxxxxxxxxx",
-    ));
 
 const initialsFromName = (name = "") =>
   name
@@ -1367,7 +1353,7 @@ function AuthPage({ onAuth, backendReady }) {
           <span>
             {backendReady
               ? "Your data is encrypted and synced to your New Horizon account."
-              : "Demo mode is active until Supabase keys are added. Background check history is private and never shown publicly."}
+              : "Demo mode is active until the Neon sign-in settings are added. Background check history is private and never shown publicly."}
           </span>
         </div>
       </div>
@@ -2074,7 +2060,7 @@ function ConnectPage({ setPage, setChatUser, community, user, backendReady }) {
             fontSize: 13,
           }}
         >
-          Community profiles are loading from Supabase.
+          Community profiles are loading from the database.
         </div>
       )}
 
@@ -3996,6 +3982,7 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
   const [tab, _setTab] = useState("edit");
   const [credEmail, setCredEmail] = useState(user?.email || "");
   const [credPassword, setCredPassword] = useState("");
+  const [credCurrent, setCredCurrent] = useState("");
   const [credSaving, setCredSaving] = useState(false);
   const [credMsg, setCredMsg] = useState("");
   const setTab = (nextTab) => {
@@ -4055,9 +4042,11 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
       await AuthService.updateCredentials({
         email: emailChanged ? credEmail : undefined,
         password: credPassword || undefined,
+        currentPassword: credCurrent || undefined,
       });
       setCredMsg("✓ Credentials updated");
       setCredPassword("");
+      setCredCurrent("");
     } catch (error) {
       setCredMsg(error?.message || "Could not update credentials.");
     } finally {
@@ -4534,6 +4523,27 @@ function ProfilePage({ user, setUser, onLogout, backendReady }) {
             </div>
             <div>
               <label
+                htmlFor="account-current-password"
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  display: "block",
+                  marginBottom: 6,
+                }}
+              >
+                Current Password
+              </label>
+              <input
+                id="account-current-password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="Needed to set a new password"
+                value={credCurrent}
+                onChange={(e) => { setCredCurrent(e.target.value); setCredMsg(""); }}
+              />
+            </div>
+            <div>
+              <label
                 htmlFor="account-new-password"
                 style={{
                   fontSize: 13,
@@ -4716,7 +4726,7 @@ export default function App() {
       throw new Error("All fields required.");
     if (mode === "register" && form.password !== form.confirmPassword)
       throw new Error("Passwords don't match.");
-    if (!BACKEND_READY) throw new Error("Supabase is not configured.");
+    if (!BACKEND_READY) throw new Error("Sign-in is not configured yet.");
     if (mode === "login") {
       await AuthService.signIn({ email: form.email, password: form.password });
     } else {

@@ -1,26 +1,33 @@
-# NewHorizonWeb frontend - Vite
-FROM node:20-alpine as base
+# NewHorizonWeb: builds the React app and runs the Express server, which
+# serves the app and its /api routes (Neon Postgres + Neon Auth).
+FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package.json package-lock.json* pnpm-lock.yaml* ./
-RUN npm ci --frozen-lockfile || npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
-FROM node:20-alpine as builder
+FROM node:20-alpine AS builder
 WORKDIR /app
-COPY --from=base /app/node_modules ./node_modules
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+# VITE_* values are inlined at build time; pass them as build args.
+ARG VITE_NEON_AUTH_URL
+ARG VITE_ADMIN_EMAILS
+ARG VITE_GOOGLE_OAUTH_CLIENT_ID
+ENV VITE_NEON_AUTH_URL=$VITE_NEON_AUTH_URL \
+    VITE_ADMIN_EMAILS=$VITE_ADMIN_EMAILS \
+    VITE_GOOGLE_OAUTH_CLIENT_ID=$VITE_GOOGLE_OAUTH_CLIENT_ID
+RUN npm run build && npm prune --omit=dev
 
-FROM node:20-alpine as runtime
+FROM node:20-alpine AS runtime
 WORKDIR /app
-RUN npm install -g serve@latest
+ENV NODE_ENV=production PORT=3000
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
-
-RUN addgroup -g 1001 -S nodejs && adduser -S appuser -u 1001 && chown -R appuser:nodejs /app
-
+COPY --from=builder /app/server ./server
+COPY --from=builder /app/server.js /app/package.json ./
+RUN addgroup -g 1001 -S nodejs && adduser -S appuser -u 1001 -G nodejs && chown -R appuser:nodejs /app
 USER appuser
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:5173 || exit 1
-
-EXPOSE 5173
-CMD ["serve", "-s", "dist", "-l", "5173"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1
+EXPOSE 3000
+CMD ["node", "server.js"]
