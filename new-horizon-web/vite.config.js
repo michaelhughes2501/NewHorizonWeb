@@ -8,6 +8,8 @@ export default defineConfig({
     port: 5173,
     host: true,
     open: false,
+    // `npm run dev:api` serves the Express API on port 3000.
+    proxy: { "/api": { target: "http://localhost:3000", changeOrigin: false } },
   },
   preview: {
     port: 4173,

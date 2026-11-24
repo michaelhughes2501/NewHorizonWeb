@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { BACKEND_READY } from "../services/database-service.js";
 
 /**
  * NEW HORIZON — Admin Dashboard
@@ -546,14 +547,6 @@ function Sidebar({ page, setPage }) {
 }
 
 // ─── OVERVIEW ─────────────────────────────────────────────────────────────────
-const BACKEND_READY = Boolean(
-  import.meta.env.VITE_SUPABASE_URL &&
-  import.meta.env.VITE_SUPABASE_URL !== "https://YOUR_PROJECT.supabase.co" &&
-  import.meta.env.VITE_SUPABASE_URL !== "placeholder" &&
-  import.meta.env.VITE_SUPABASE_ANON_KEY &&
-  import.meta.env.VITE_SUPABASE_ANON_KEY !== "YOUR_ANON_KEY" &&
-  import.meta.env.VITE_SUPABASE_ANON_KEY !== "placeholder",
-);
 
 function Overview() {
   const cards = [
@@ -643,7 +636,7 @@ function Overview() {
         </p>
       </div>
 
-      {/* Live Supabase stat cards */}
+      {/* Live stat cards */}
       <div style={{ marginBottom: 24 }}>
         <div
           style={{
@@ -857,7 +850,7 @@ function Overview() {
           >
             <span style={{ fontSize: 16 }}>🔗</span>
             <span style={{ fontSize: 13, color: T.warn, fontWeight: 500 }}>
-              Connect your Supabase project to see live data — add your
+              Connect your Neon project to see live data — add your
               credentials to{" "}
               <code
                 style={{
@@ -2348,10 +2341,10 @@ function SystemSettings() {
               Database
             </h3>
             {[
-              ["Provider", "Supabase (PostgreSQL 15)"],
-              ["Region", "us-east-1 (N. Virginia)"],
+              ["Provider", "Neon (PostgreSQL)"],
+              ["Region", "us-east-2 (Ohio)"],
               ["Storage", "2.4 GB / 8 GB used"],
-              ["RLS", "Enabled on all tables"],
+              ["Access", "Checked by the app server"],
               ["Backups", "Daily at 3AM UTC"],
               ["Last Backup", "Today at 3:02 AM"],
             ].map(([l, v]) => (
@@ -2390,7 +2383,7 @@ function SystemSettings() {
               Deployment Info
             </h3>
             {[
-              ["Platform", "Vercel + Supabase"],
+              ["Platform", "Node + Neon"],
               ["App Version", "v2.1.4"],
               ["Last Deploy", "Apr 16, 2025 9:14 AM"],
               ["Environment", "Production"],

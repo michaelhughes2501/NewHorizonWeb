@@ -1,31 +1,47 @@
 # Environment Setup
 
-## Frontend
+New Horizon runs on Neon: the "New_Horizons" Postgres project for data and
+Neon Auth for sign-in. The browser talks only to this app's Express server
+(`/api`), which checks the signed-in member on every request.
 
-Use [`.env`](C:/Users/micha/Downloads/files/new-horizon-web/.env) for browser-safe values only.
+## Frontend (`.env`)
 
-Allowed here:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
+Copy [`.env.example`](./.env.example) to `.env`. Browser-safe values only:
+
+- `VITE_NEON_AUTH_URL`: the Neon Auth base URL (Neon Console > Auth > Configuration)
+- `VITE_API_BASE_URL`: optional, only when the API is on another origin
+- `VITE_ADMIN_EMAILS`: hashed admin emails for `/admin`
+- `VITE_GOOGLE_OAUTH_CLIENT_ID`: public Google OAuth client id
 
 Never put these in a `VITE_` variable:
-- `SUPABASE_ACCESS_TOKEN`
-- `SUPABASE_SERVICE_ROLE_KEY`
+
+- `DATABASE_URL`, `DATABASE_URL_UNPOOLED` or any database password
+- `AWS_SECRET_ACCESS_KEY`
+- `GOOGLE_OAUTH_CLIENT_SECRET`
 - `RESEND_API_KEY`
-- database passwords
 
-## Server / Admin / CLI
+## Server (`.env.server`)
 
-Copy [`.env.server.example`](C:/Users/micha/Downloads/files/new-horizon-web/.env.server.example) to `.env.server` and keep it private.
+Copy [`.env.server.example`](./.env.server.example) to `.env.server` and keep
+it private. `server.js` refuses to start without `DATABASE_URL`,
+`NEON_AUTH_BASE_URL` and `NEON_AUTH_JWKS_URL`.
 
-Use `.env.server` for:
-- Supabase CLI access
-- service-role operations
-- edge function deployment
-- email provider secrets
+## Running locally
 
-## Current Project Split
+```bash
+npm install
+npm run dev:api   # Express API on :3000 (reads .env.server)
+npm run dev       # Vite on :5173, proxies /api to :3000
+npm test          # API tests (no database needed)
+```
 
-- Frontend app: [`.env`](C:/Users/micha/Downloads/files/new-horizon-web/.env)
-- Server/admin template: [`.env.server.example`](C:/Users/micha/Downloads/files/new-horizon-web/.env.server.example)
+## Database changes
+
+Schema changes live in `neon/migrations/*.sql` and are applied in order with:
+
+```bash
+node --env-file=.env.server scripts/migrate-neon.mjs --dry-run
+node --env-file=.env.server scripts/migrate-neon.mjs
+```
+
+Try them on a Neon branch first.

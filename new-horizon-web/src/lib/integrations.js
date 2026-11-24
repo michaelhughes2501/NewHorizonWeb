@@ -32,8 +32,10 @@ export function clearTokens(id) { localStorage.removeItem(key(id)); }
 export function isExpired(t) { return !t || !t.expiresAt || Date.now() > t.expiresAt - 60000; }
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID || '';
+// The token exchange runs on this app's own server (server/api.js) so the
+// Google client secret never reaches the browser.
 const FN_URL = import.meta.env.VITE_INTEGRATIONS_FUNCTION_URL
-  || (import.meta.env.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/integrations` : '');
+  || `${(import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')}/integrations`;
 
 function randomB64Url(bytes) {
   const arr = new Uint8Array(bytes); crypto.getRandomValues(arr);

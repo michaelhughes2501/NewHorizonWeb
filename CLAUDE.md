@@ -4,7 +4,7 @@ Guidance for Claude Code (and humans) when working in this repository.
 
 ## Project overview
 
-**NewHorizonWeb** is the web companion to the `new-horizon` mobile app. The runnable app lives under [`new-horizon-web/`](./new-horizon-web): a **Vite 6 + React 19** SPA wired to **Supabase**, with the database schema in `database-schema.sql` and a JS data-access layer in `database-service.js`.
+**NewHorizonWeb** is the web companion to the `new-horizon` mobile app. The runnable app lives under [`new-horizon-web/`](./new-horizon-web): a **Vite + React 19** SPA served by a small **Express** API (`server/`) on **Neon** (Postgres project "New_Horizons" + Neon Auth). The browser's data-access layer is `src/services/database-service.js`; it calls `/api` with the member's Neon Auth token.
 
 Top-level `.jsx` files (`admin-dashboard.jsx`, `mobile-app.jsx`, `notification-system.jsx`) are reference / prototype artefacts — **not part of the live build** and not imported anywhere inside `new-horizon-web/src/`.
 
@@ -12,8 +12,10 @@ Top-level `.jsx` files (`admin-dashboard.jsx`, `mobile-app.jsx`, `notification-s
 
 - Vite + React (single-page app under `new-horizon-web/`)
 - React Router v6 (declarative routes, lazy-loaded pages)
-- Supabase JS (`@supabase/supabase-js`)
-- PostgreSQL schema in `database-schema.sql` / `new-horizon-web/supabase/database-schema.sql` — intended for Supabase
+- Neon Auth (`@neon/auth`, Supabase-style adapter) for sign-in
+- Express 5 + `pg` API in `new-horizon-web/server/`, verifying Neon Auth JWTs with `jose`
+- Live updates: Postgres NOTIFY triggers → Server-Sent Events (`/api/events`)
+- Schema changes: `new-horizon-web/neon/migrations/*.sql` (applied with `scripts/migrate-neon.mjs`). The `database-schema.sql` files are the old Supabase schema, kept for reference only.
 - ES modules; Node version requirement and exact package versions are pinned in `new-horizon-web/package.json` — check there if anything below drifts.
 
 ## Commands (run inside `new-horizon-web/`)
@@ -21,20 +23,22 @@ Top-level `.jsx` files (`admin-dashboard.jsx`, `mobile-app.jsx`, `notification-s
 ```bash
 cd new-horizon-web
 npm install
-npm run dev        # vite dev server
+npm run dev        # vite dev server (proxies /api to :3000)
+npm run dev:api    # Express API on :3000
+npm test           # API tests
 npm run build      # vite build → dist/
 npm run preview    # serve the production build
 ```
 
 ## Environment
 
-Copy `new-horizon-web/.env.example` to `new-horizon-web/.env` and fill in your Supabase URL + anon key. The canonical lists live in:
+Copy `new-horizon-web/.env.example` to `new-horizon-web/.env` (Neon Auth URL) and `new-horizon-web/.env.server.example` to `new-horizon-web/.env.server` (database and auth settings for the API). The canonical lists live in:
 
-- `new-horizon-web/.env.example` — client-safe `VITE_*` vars (Supabase URL, anon key, optional publishable key).
-- `new-horizon-web/.env.server.example` — server-only secrets (Supabase service-role/access tokens, DB password, mail API keys, deployment URLs).
+- `new-horizon-web/.env.example` — client-safe `VITE_*` vars (Neon Auth URL, admin hashes, Google client id).
+- `new-horizon-web/.env.server.example` — server-only secrets (Neon database URLs, Neon Auth JWKS, storage keys, Google client secret, mail API keys).
 - `new-horizon-web/ENVIRONMENT.md` — long-form documentation for every variable.
 
-Server-only secrets must **never** be re-prefixed with `VITE_` — that would inline them into the client bundle and bypass RLS.
+Server-only secrets must **never** be re-prefixed with `VITE_` — that would inline them into the client bundle.
 
 ## Repo layout
 
@@ -63,18 +67,20 @@ NewHorizonWeb/
     │   ├── pages/
     │   │   ├── AdminDashboard.jsx
     │   │   └── NotificationCenter.jsx
-    │   └── services/database-service.js   # Supabase wrapper (AuthService, ProfileService, JobService, MessageService, …)
-    └── supabase/database-schema.sql       # canonical schema for the live app
+    │   └── services/database-service.js   # /api client + Neon Auth (AuthService, ProfileService, JobService, MessageService, …)
+    ├── server/                            # Express API: api.js routes, auth.js (JWT), events.js (live updates), storage.js (photos)
+    ├── neon/migrations/                   # SQL migrations for the Neon New_Horizons project
+    └── supabase/database-schema.sql       # retired Supabase schema (reference only)
 ```
 
 ## Conventions
 
-- **All DB access** goes through Supabase + RLS. Never embed a service-role key on the client.
+- **All DB access** goes through the Express API in `server/api.js`. Each route takes the member id from the verified Neon Auth token, never from the request. The browser never holds a database credential.
 - Only `VITE_*` env vars are exposed to the browser bundle.
 - Use `react-router-dom` v6 patterns. The current implementation in `src/main.jsx` uses `<BrowserRouter>` with declarative `<Routes>` / `<Route>` and lazy-loaded pages — keep that style consistent (don't mix in `createBrowserRouter` ad-hoc).
 - Use `<img loading="lazy">` and `srcset` for images so pages stay fast.
-- Use the wrappers in `src/services/database-service.js` (Auth/Profile/Job/Message services) rather than calling `supabase` directly from components.
-- Mirror schema changes in **both** `database-schema.sql` (top-level reference) **and** `new-horizon-web/supabase/database-schema.sql` (active migration source). Treat the `supabase/` copy as authoritative for the running app. The two copies are currently identical — keep them that way.
+- Use the wrappers in `src/services/database-service.js` (Auth/Profile/Job/Message services) rather than calling `fetch('/api/...')` directly from components.
+- Add schema changes as a new numbered file in `new-horizon-web/neon/migrations/` and try it on a Neon branch first. The two `database-schema.sql` files describe the retired Supabase schema and are not applied anywhere.
 - The brand uses a gold/cream/charcoal palette with Cormorant Garamond + DM Sans typography (defined inside `App.jsx`); don't introduce a CSS framework on top.
 - Treat criminal-history fields as private — store them but never surface them in public API responses.
 - The top-level `*.jsx` and `database-service.js` files at the repo root are documentation/prototype only — **don't import them from the Vite app** and don't bring them into bundles.
@@ -107,13 +113,13 @@ Every site must **run cleanly on localhost with zero errors or bugs, and the cod
 
 ### Stack (default)
 - **Frontend:** React 18 + Vite + TypeScript + Tailwind. Functional components + hooks only.
-- **Backend/DB:** Supabase (Postgres + Auth + Storage). **RLS ON for every table** with explicit per-user policies. Schema changes go through SQL migrations in `supabase/migrations/` only.
-- **AI layer:** Anthropic API. Persistent per-user companion with chat history in Supabase. `claude-sonnet-4-6` for in-app features, `claude-opus-4-8` for heavy reasoning. Send full history each call. Never ship API keys client-side — proxy through an Edge Function / server.
+- **Backend/DB:** Neon (Postgres + Neon Auth + Object Storage) behind the Express API. Every route enforces ownership from the verified token. Schema changes go through SQL migrations in `new-horizon-web/neon/migrations/` only.
+- **AI layer:** Anthropic API. Persistent per-user companion with chat history in Neon. `claude-sonnet-4-6` for in-app features, `claude-opus-4-8` for heavy reasoning. Send full history each call. Never ship API keys client-side — proxy through the Express server.
 - Routing: React Router. UI: Radix UI (+ shadcn). Icons: lucide-react. Motion: Framer Motion. Tests: Vitest.
 
 ### Environment
 - Windows + nvm-windows (`nvm use 20`). One dev server per port; kill stale processes first.
-- Env vars: read `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` etc. from `.env`. If a var is missing, **fail loudly and name the exact var — never invent values.** Keep `.env.example` complete.
+- Env vars: read `VITE_NEON_AUTH_URL` etc. from `.env` (server values from `.env.server`). If a var is missing, **fail loudly and name the exact var — never invent values.** Keep `.env.example` complete.
 - If npm/installs fail on SSL/TLS, suspect antivirus (AVG) interception.
 
 ### Visual standard (enterprise-grade, intriguing)

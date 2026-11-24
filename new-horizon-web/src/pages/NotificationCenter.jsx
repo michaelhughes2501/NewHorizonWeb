@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AuthService,
+  BACKEND_READY,
   NotificationService,
   ProfileService,
 } from "../services/database-service.js";
@@ -144,21 +145,6 @@ if (!document.getElementById("nh-notif-styles")) {
   document.head.appendChild(s);
 }
 
-const hasConfiguredValue = (value, placeholder) =>
-  Boolean(value && value !== placeholder);
-const BACKEND_READY =
-  hasConfiguredValue(
-    import.meta.env.VITE_SUPABASE_URL,
-    "https://YOUR_PROJECT.supabase.co",
-  ) &&
-  (hasConfiguredValue(
-    import.meta.env.VITE_SUPABASE_ANON_KEY,
-    "YOUR_ANON_KEY",
-  ) ||
-    hasConfiguredValue(
-      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      "sb_publishable_xxxxxxxxxxxxxxxxxxxx",
-    ));
 
 function fmtRelative(value) {
   if (!value) return "Now";
@@ -988,8 +974,8 @@ export default function NotificationCenter() {
                   style={{ fontSize: 12, color: "#7A7A8A", lineHeight: 1.6 }}
                 >
                   {BACKEND_READY
-                    ? "This page listens for live notification inserts through Supabase real-time subscriptions."
-                    : "Fill the project .env file with your Supabase values to enable live subscriptions."}
+                    ? "This page receives new notifications live from the server."
+                    : "Fill the project .env file with your Neon values to enable live updates."}
                 </div>
               </div>
             </div>

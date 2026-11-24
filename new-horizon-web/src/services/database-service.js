@@ -1,449 +1,292 @@
-import { createClient } from '@supabase/supabase-js'
+// Data access for the New Horizon web app.
+//
+// Sign-in runs on Neon Auth (Managed Better Auth) through its Supabase-style
+// adapter, so session handling looks the same as before. Every data call goes
+// to this app's own Express API (/api, see server/api.js), which checks the
+// signed-in member on each request and talks to the Neon "New_Horizons"
+// database. Nothing in the browser holds a database credential.
+import { createAuthClient } from '@neon/auth'
+import { SupabaseAuthAdapter } from '@neon/auth/vanilla/adapters'
 
-const PLACEHOLDERS = new Set([
-  '',
-  'https://your-project.supabase.co',
-  'https://YOUR_PROJECT.supabase.co',
-  'your-anon-key',
-  'YOUR_ANON_KEY',
-  'sb_publishable_xxxxxxxxxxxxxxxxxxxx',
-])
+const PLACEHOLDERS = new Set(['', 'https://your-project.neonauth.example/neondb/auth'])
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-// Accept either the classic anon key or the newer publishable key — App.jsx
-// and NotificationCenter.jsx both treat either one as "backend configured",
-// so the client here must be created with whichever one is actually set or
-// those pages will believe the backend is ready while every call silently
-// falls back to the no-op stub client below.
-const supabaseAnonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+const authUrl = import.meta.env.VITE_NEON_AUTH_URL
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
 
-export const SUPABASE_CONFIGURED =
-  Boolean(supabaseUrl) &&
-  Boolean(supabaseAnonKey) &&
-  !PLACEHOLDERS.has(supabaseUrl) &&
-  !PLACEHOLDERS.has(supabaseAnonKey)
+export const BACKEND_READY = Boolean(authUrl) && !PLACEHOLDERS.has(authUrl)
 
-// When Supabase is not configured (e.g. local preview / demo with no secrets),
-// expose a no-op client so importing this module never throws. The app falls
-// back to its built-in demo/mock data via the BACKEND_READY guard in App.jsx.
-const createStubClient = () => {
+// Without an auth URL (local preview / demo with no secrets) expose a stub
+// so importing this module never throws; the pages fall back to demo data.
+const createStubAuth = () => {
   const notReady = () =>
-    Promise.reject(new Error('Supabase is not configured (preview/demo mode).'))
-  const queryBuilder = () => {
-    const builder = {
-      select: () => builder,
-      insert: () => builder,
-      update: () => builder,
-      delete: () => builder,
-      eq: () => builder,
-      or: () => builder,
-      ilike: () => builder,
-      order: () => builder,
-      limit: () => builder,
-      single: () => notReady(),
-      then: (resolve) => resolve({ data: [], error: null, count: 0 }),
-    }
-    return builder
-  }
-  const channel = () => {
-    const ch = { on: () => ch, subscribe: () => ch }
-    return ch
-  }
+    Promise.resolve({ data: { user: null, session: null }, error: new Error('Neon Auth is not configured (preview/demo mode).') })
   return {
-    auth: {
-      signUp: notReady,
-      signInWithPassword: notReady,
-      signOut: () => Promise.resolve({ error: null }),
-      getUser: () => Promise.resolve({ data: { user: null } }),
-      getSession: () => Promise.resolve({ data: { session: null } }),
-      onAuthStateChange: () => ({
-        data: { subscription: { unsubscribe: () => {} } },
-      }),
-    },
-    from: queryBuilder,
-    rpc: () => Promise.resolve({ data: null, error: null }),
-    channel,
-    removeChannel: () => {},
-    storage: { from: () => ({ upload: notReady, getPublicUrl: () => ({ data: { publicUrl: '' } }) }) },
+    signUp: notReady,
+    signInWithPassword: notReady,
+    signOut: () => Promise.resolve({ error: null }),
+    getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    updateUser: notReady,
+    resetPasswordForEmail: notReady,
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    getBetterAuthInstance: () => null,
   }
 }
 
-const supabase = SUPABASE_CONFIGURED
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : createStubClient()
+const auth = BACKEND_READY
+  ? createAuthClient(authUrl, { adapter: SupabaseAuthAdapter() })
+  : createStubAuth()
+
+export class ApiError extends Error {
+  constructor(status, message) {
+    super(message)
+    this.status = status
+  }
+}
+
+async function accessToken() {
+  const { data } = await auth.getSession()
+  return data?.session?.access_token || null
+}
+
+async function api(path, { method = 'GET', body, headers = {}, raw = false } = {}) {
+  if (!BACKEND_READY) throw new ApiError(503, 'The backend is not configured (preview/demo mode).')
+  const token = await accessToken()
+  const init = { method, headers: { ...headers } }
+  if (token) init.headers.Authorization = `Bearer ${token}`
+  if (body !== undefined) {
+    if (raw) {
+      init.body = body
+    } else {
+      init.headers['Content-Type'] = 'application/json'
+      init.body = JSON.stringify(body)
+    }
+  }
+  const res = await fetch(`${API_BASE}${path}`, init)
+  if (res.status === 204) return null
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new ApiError(res.status, data?.message || `Request failed (${res.status}).`)
+  return data
+}
+
+const qs = (params) => {
+  const search = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null && v !== '') search.set(k, String(v))
+  const s = search.toString()
+  return s ? `?${s}` : ''
+}
+
+const unwrap = (result) => {
+  if (result?.error) throw result.error
+  return result?.data
+}
 
 export const AuthService = {
   async signUp({ email, password, name, username } = {}) {
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) throw error
-    if (data.user) {
-      const { error: insertError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        auth_id: data.user.id,
-        name: name || username,
-        email,
-      })
-      if (insertError) throw insertError
-    }
-    return data
+    // The neon_auth.user trigger creates the member's profile row.
+    return unwrap(await auth.signUp({ email, password, options: { data: { name: name || username } } }))
   },
 
   async signIn({ email, password } = {}) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-    return data
+    return unwrap(await auth.signInWithPassword({ email, password }))
   },
 
   async signOut() {
-    const { error } = await supabase.auth.signOut()
+    const { error } = await auth.signOut()
     if (error) throw error
   },
 
   async getUser() {
-    const { data, error } = await supabase.auth.getUser()
-    if (error) throw error
+    const { data } = await auth.getUser()
     return data?.user ?? null
   },
 
   onAuthStateChange(callback) {
-    return supabase.auth.onAuthStateChange((_event, session) => {
-      callback(session?.user ?? null)
-    })
+    return auth.onAuthStateChange((_event, session) => callback(session?.user ?? null))
   },
 
   // Alias kept for backward compatibility with App.jsx
   onAuthChange(callback) {
-    return supabase.auth.onAuthStateChange((event, session) => {
-      callback(event, session)
-    })
+    return auth.onAuthStateChange((event, session) => callback(event, session))
   },
 
   async getSession() {
-    const { data } = await supabase.auth.getSession()
-    return data.session
+    const { data } = await auth.getSession()
+    return data?.session ?? null
   },
 
-  async updateCredentials({ email, password } = {}) {
-    const updates = {}
-    if (email) updates.email = email
-    if (password) updates.password = password
-    if (!Object.keys(updates).length) return
-    const { data, error } = await supabase.auth.updateUser(updates)
-    if (error) throw error
-    return data
+  // Better Auth needs the current password to set a new one.
+  async updateCredentials({ email, password, currentPassword } = {}) {
+    const client = auth.getBetterAuthInstance?.()
+    if (!client) throw new Error('Neon Auth is not configured (preview/demo mode).')
+    if (email) {
+      const r = await client.changeEmail({ newEmail: email })
+      if (r?.error) throw new Error(r.error.message || 'Could not change email.')
+    }
+    if (password) {
+      if (!currentPassword) throw new Error('Enter your current password to set a new one.')
+      const r = await client.changePassword({ currentPassword, newPassword: password, revokeOtherSessions: true })
+      if (r?.error) throw new Error(r.error.message || 'Could not change password.')
+    }
+  },
+
+  async requestPasswordReset(email) {
+    return unwrap(await auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` }))
   },
 }
 
 export const ProfileService = {
-  async getProfile(userId) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    if (error) throw error
-    return data
-  },
+  // Your own profile returns every field; anyone else's returns only the
+  // fields safe to show other members (never criminal-history data).
+  getProfile: (userId) => api(`/profiles/${encodeURIComponent(userId)}`),
 
   async getMyProfile() {
-    const { data, error } = await supabase.auth.getUser()
-    if (error) throw error
-    if (!data?.user) return null
-    return ProfileService.getProfile(data.user.id)
+    if (!(await accessToken())) return null
+    return api('/me')
   },
 
-  // Public-facing member browse (Connect page, community list). Only ever
-  // select fields that are safe to show other members — never offense_type,
-  // email, ban_reason, or other private/criminal-history columns. See
-  // CLAUDE.md: "Treat criminal-history fields as private."
-  async getCommunity({ state: stateFilter, limit = 30 } = {}) {
-    let query = supabase
-      .from('profiles')
-      .select('id, name, avatar, avatar_url, age, state, bio, release_year, interests, is_verified, last_seen, show_state, online')
-      .eq('public_profile', true)
-      .eq('is_banned', false)
-      .limit(limit)
-    if (stateFilter && stateFilter !== 'All') query = query.eq('state', stateFilter)
-    const { data, error } = await query
-    if (error) throw error
-    return data
-  },
+  getCommunity: ({ state, limit = 30 } = {}) => api(`/community${qs({ state, limit })}`),
 
-  async updateProfile(userId, updates) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', userId)
-      .select()
-      .single()
-    if (error) throw error
-    return data
-  },
+  // userId is kept for call-site compatibility; the API only ever updates the
+  // signed-in member's own profile.
+  updateProfile: (_userId, updates) => api('/me', { method: 'PATCH', body: updates }),
 
-  async uploadAvatar(userId, file) {
-    const ext = file.name.split('.').pop()
-    const path = `${userId}/avatar.${ext}`
-    if (path.includes('..')) throw new Error('Invalid path')
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(path, file, { upsert: true })
-    if (uploadError) throw uploadError
-    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-    await ProfileService.updateProfile(userId, { avatar_url: publicUrl })
-    return publicUrl
+  async uploadAvatar(_userId, file) {
+    const { avatar_url } = await api('/me/avatar', {
+      method: 'POST',
+      body: file,
+      raw: true,
+      headers: { 'Content-Type': file.type },
+    })
+    return avatar_url
   },
 }
 
+// "Connections" on the Connect page are profile likes; a mutual like makes a
+// match and a notification (handled by a database trigger).
 export const ConnectionService = {
-  async likeProfile(userId, targetId) {
-    const { data, error } = await supabase
-      .from('connections')
-      .insert({ user_a: userId, user_b: targetId })
-      .select()
-      .single()
-    if (error) throw error
-    return data
-  },
-
-  async unlikeProfile(userId, targetId) {
-    const { error } = await supabase
-      .from('connections')
-      .delete()
-      .eq('user_a', userId)
-      .eq('user_b', targetId)
-    if (error) throw error
-  },
-
-  async getConnections(userId) {
-    const { data, error } = await supabase
-      .from('connections')
-      .select('*')
-      .or(`user_a.eq.${userId},user_b.eq.${userId}`)
-    if (error) throw error
-    return data
-  },
+  likeProfile: (_userId, targetId) => api('/likes', { method: 'POST', body: { targetId } }),
+  unlikeProfile: (_userId, targetId) => api(`/likes/${encodeURIComponent(targetId)}`, { method: 'DELETE' }),
+  getConnections: () => api('/likes'),
 }
 
 export const JobService = {
-  async getJobs(filters = {}) {
-    return JobService.listJobs(filters)
-  },
+  getJobs: (filters = {}) => JobService.listJobs(filters),
+  listJobs: (filters = {}) =>
+    api(`/jobs${qs({ location: filters.location, fair_chance: filters.fair_chance ? 'true' : undefined })}`),
+  getJob: (id) => api(`/jobs/${encodeURIComponent(id)}`),
+  saveJob: (_userId, jobId) => api('/saved-jobs', { method: 'POST', body: { jobId } }),
+  getSavedJobs: () => api('/saved-jobs'),
+  unsaveJob: (_userId, jobId) => api(`/saved-jobs/${encodeURIComponent(jobId)}`, { method: 'DELETE' }),
+  applyToJob: (_userId, jobId, coverText) => api('/applications', { method: 'POST', body: { jobId, coverText } }),
+  listApplications: () => api('/applications'),
+}
 
-  async listJobs(filters = {}) {
-    let query = supabase.from('jobs').select('*').eq('is_approved', true).order('created_at', { ascending: false })
-    if (filters.location) query = query.ilike('location', `%${filters.location}%`)
-    if (filters.fair_chance) query = query.eq('felony_friendly', true)
-    const { data, error } = await query
-    if (error) throw error
-    return data
-  },
+// ── Live updates ─────────────────────────────────────────────────────────
+// One Server-Sent Events stream per tab, shared by every subscriber. The
+// stream carries a short-lived sign-in token, so it reconnects with a fresh
+// token when the server closes it.
+const live = { source: null, listeners: new Set(), timer: null }
 
-  async getJob(id) {
-    const { data, error } = await supabase.from('jobs').select('*').eq('id', id).single()
-    if (error) throw error
-    return data
-  },
+async function openStream() {
+  if (live.source || !live.listeners.size) return
+  const token = await accessToken()
+  if (!token) return
+  const source = new EventSource(`${API_BASE}/events${qs({ token })}`)
+  live.source = source
+  const dispatch = (type) => (e) => {
+    let data
+    try {
+      data = JSON.parse(e.data)
+    } catch {
+      return
+    }
+    for (const fn of live.listeners) fn(type, data)
+  }
+  source.addEventListener('message', dispatch('message'))
+  source.addEventListener('notification', dispatch('notification'))
+  const reconnect = () => {
+    source.close()
+    if (live.source === source) live.source = null
+    if (!live.listeners.size || live.timer) return
+    live.timer = setTimeout(() => {
+      live.timer = null
+      openStream()
+    }, 3000)
+  }
+  source.addEventListener('expired', reconnect)
+  source.onerror = reconnect
+}
 
-  async saveJob(userId, jobId) {
-    const { error } = await supabase.from('saved_jobs').insert({ user_id: userId, job_id: jobId })
-    if (error) throw error
-  },
-
-  async getSavedJobs(userId) {
-    const { data, error } = await supabase
-      .from('saved_jobs')
-      .select('*, job:jobs(*)')
-      .eq('user_id', userId)
-    if (error) throw error
-    return data
-  },
-
-  async unsaveJob(userId, jobId) {
-    const { error } = await supabase
-      .from('saved_jobs')
-      .delete()
-      .eq('user_id', userId)
-      .eq('job_id', jobId)
-    if (error) throw error
-  },
-
-  async applyToJob(userId, jobId) {
-    const { data, error } = await supabase
-      .from('job_applications')
-      .insert({ user_id: userId, job_id: jobId, status: 'submitted' })
-      .select()
-      .single()
-    if (error) throw error
-    return data
-  },
-
-  async listApplications(userId) {
-    const { data, error } = await supabase
-      .from('job_applications')
-      .select('*, job:jobs(*)')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-    if (error) throw error
-    return data
-  },
+function subscribeLive(fn) {
+  live.listeners.add(fn)
+  openStream()
+  return {
+    unsubscribe() {
+      live.listeners.delete(fn)
+      if (!live.listeners.size) {
+        clearTimeout(live.timer)
+        live.timer = null
+        live.source?.close()
+        live.source = null
+      }
+    },
+  }
 }
 
 export const MessageService = {
-  async getUnreadCount(userId) {
-    const { count, error } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('recipient_id', userId)
-      .eq('read', false)
-    if (error) throw error
+  async getUnreadCount() {
+    const { count } = await api('/messages/unread-count')
     return count ?? 0
   },
+  listConversations: () => api('/conversations'),
+  getMessages: (_userId, partnerId) => api(`/messages/${encodeURIComponent(partnerId)}`),
+  sendMessage: (_userId, recipientId, content) => api('/messages', { method: 'POST', body: { recipientId, content } }),
 
-  async listConversations(userId) {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*, sender:profiles!sender_id(id, name), recipient:profiles!recipient_id(id, name)')
-      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
-      .order('created_at', { ascending: false })
-    if (error) throw error
-    const seen = new Set()
-    return data.filter(m => {
-      const key = [m.sender_id, m.recipient_id].sort().join('-')
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
+  subscribeToMessages(userId, partnerId, callback) {
+    return subscribeLive((type, msg) => {
+      if (type !== 'message') return
+      const between =
+        (msg.sender_id === partnerId && msg.recipient_id === userId) ||
+        (msg.sender_id === userId && msg.recipient_id === partnerId)
+      if (between && msg.sender_id !== userId) callback(msg)
     })
   },
 
-  async getMessages(userId, partnerId) {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*, sender:profiles!sender_id(id, name)')
-      .or(`and(sender_id.eq.${userId},recipient_id.eq.${partnerId}),and(sender_id.eq.${partnerId},recipient_id.eq.${userId})`)
-      .order('created_at')
-    if (error) throw error
-    await supabase.from('messages').update({ read: true, read_at: new Date().toISOString() }).eq('sender_id', partnerId).eq('recipient_id', userId).eq('read', false)
-    return data
-  },
-
-  async sendMessage(senderId, recipientId, content) {
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({ sender_id: senderId, recipient_id: recipientId, content })
-      .select()
-      .single()
-    if (error) throw error
-    return data
-  },
-
-  subscribeToMessages(userId, partnerId, callback) {
-    return supabase
-      .channel(`messages:${[userId, partnerId].sort().join('-')}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `recipient_id=eq.${userId}`,
-      }, payload => callback(payload.new))
-      .subscribe()
-  },
-
   unsubscribe(channel) {
-    supabase.removeChannel(channel)
+    channel?.unsubscribe?.()
   },
 }
 
 export const BlogService = {
-  async getPosts(limit) {
-    return BlogService.listPosts(limit)
-  },
-
-  async listPosts(limit = 20) {
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select('*, author:profiles(id, name)')
-      .order('created_at', { ascending: false })
-      .limit(limit)
-    if (error) throw error
-    return data
-  },
-
-  async getPost(id) {
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select('*, author:profiles(id, name)')
-      .eq('id', id)
-      .single()
-    if (error) throw error
-    return data
-  },
-
-  async createPost(userId, { title, content, category }) {
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .insert({ author_id: userId, title, content, category })
-      .select()
-      .single()
-    if (error) throw error
-    return data
-  },
-
-  async likePost(userId, postId) {
-    const { error } = await supabase.from('blog_likes').insert({ user_id: userId, post_id: postId })
-    if (error) throw error
-    await supabase.rpc('increment_post_likes', { post_id: postId })
-  },
+  getPosts: (limit) => BlogService.listPosts(limit),
+  listPosts: (limit = 20) => api(`/posts${qs({ limit })}`),
+  getPost: (id) => api(`/posts/${encodeURIComponent(id)}`),
+  createPost: (_userId, { title, content, category }) => api('/posts', { method: 'POST', body: { title, content, category } }),
+  // A like trigger keeps blog_posts.likes_count in step, so there is no
+  // separate counter call.
+  likePost: (_userId, postId) => api(`/posts/${encodeURIComponent(postId)}/like`, { method: 'POST' }),
+  unlikePost: (_userId, postId) => api(`/posts/${encodeURIComponent(postId)}/like`, { method: 'DELETE' }),
 }
 
 export const NotificationService = {
-  async getUnreadCount(userId) {
-    const { count, error } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('read', false)
-    if (error) throw error
+  async getUnreadCount() {
+    const { count } = await api('/notifications/unread-count')
     return count ?? 0
   },
+  listNotifications: () => api('/notifications'),
+  markRead: (notificationId) => api(`/notifications/${encodeURIComponent(notificationId)}/read`, { method: 'POST' }),
+  markAllRead: () => api('/notifications/read-all', { method: 'POST' }),
 
-  async listNotifications(userId) {
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(30)
-    if (error) throw error
-    return data
-  },
-
-  async markRead(notificationId) {
-    const { error } = await supabase.from('notifications').update({ read: true, read_at: new Date().toISOString() }).eq('id', notificationId)
-    if (error) throw error
-  },
-
-  async markAllRead(userId) {
-    const { error } = await supabase.from('notifications').update({ read: true, read_at: new Date().toISOString() }).eq('user_id', userId).eq('read', false)
-    if (error) throw error
-  },
-
-  subscribeToNotifications(userId, callback) {
-    return supabase
-      .channel(`notifications:${userId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userId}`,
-      }, payload => callback(payload.new))
-      .subscribe()
+  subscribeToNotifications(_userId, callback) {
+    return subscribeLive((type, n) => {
+      if (type === 'notification') callback(n)
+    })
   },
 
   unsubscribe(channel) {
-    if (channel) supabase.removeChannel(channel);
+    channel?.unsubscribe?.()
   },
 }
 
-export default supabase
+export default auth
