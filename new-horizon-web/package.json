@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js",
-    "lint": "eslint src/ server/ scripts/ server.js",
+    "lint": "eslint src/ server/ scripts/ api/ server.js",
     "dev:api": "node --env-file-if-exists=.env.server server.js",
     "test": "node --test \"server/__tests__/*.test.js\"",
     "migrate": "node scripts/migrate-neon.mjs"
