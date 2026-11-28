@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import "./index.css";
 import App from "./App.jsx";
 import NotFound from "./pages/NotFound.jsx";
@@ -25,6 +26,7 @@ function ProjectRouter() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      <Analytics />
     </BrowserRouter>
   );
 }
